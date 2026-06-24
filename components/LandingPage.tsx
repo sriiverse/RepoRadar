@@ -16,6 +16,7 @@ import BentoFeatures from "./BentoFeatures";
 import InteractiveDemo from "./InteractiveDemo";
 import HowItWorks from "./HowItWorks";
 import FinalCTA from "./FinalCTA";
+import AiVerdict from "./AiVerdict";
 
 const IntelligenceOrbit = dynamic(() => import("./IntelligenceOrbit"), {
   ssr: false,
@@ -395,6 +396,9 @@ export default function LandingPage() {
 
         </div>
       </main>
+
+      {/* ── AI ADOPTION VERDICT BENTO ── */}
+      <AiVerdict scanPhase={scanPhase} />
 
       {/* ── BENTO FEATURES GRID ── */}
       <div ref={featuresRef}>
