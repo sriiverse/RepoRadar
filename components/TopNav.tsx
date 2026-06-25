@@ -1,23 +1,70 @@
 "use client";
 
 import { useRepoStore } from "@/store/repoStore";
+import { useEffect, useState, useRef } from "react";
+
+const NAV_LINKS = [
+  { label: "VERDICT", id: "verdict" },
+  { label: "HEALTH", id: "health" },
+  { label: "COMMITS", id: "commits" },
+  { label: "CONTRIBUTORS", id: "contributors" },
+  { label: "PULL REQUESTS", id: "pullrequests" },
+  { label: "LANGUAGES", id: "languages" },
+  { label: "EXPORT", id: "export" },
+];
 
 export default function TopNav() {
   const { data, reset } = useRepoStore();
+  const [activeId, setActiveId] = useState("health");
+  const [underlineStyle, setUnderlineStyle] = useState<React.CSSProperties>({ left: 0, width: 0, opacity: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const NAV_LINKS = [
-    { label: "VERDICT", id: "verdict" },
-    { label: "HEALTH", id: "health" },
-    { label: "COMMITS", id: "commits" },
-    { label: "CONTRIBUTORS", id: "contributors" },
-    { label: "PULL REQUESTS", id: "pullrequests" },
-    { label: "LANGUAGES", id: "languages" },
-    { label: "EXPORT", id: "export" },
-  ];
+  // ScrollSpy: Update active navigation tab based on viewport scroll position
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "-25% 0px -40% 0px"
+      }
+    );
+
+    NAV_LINKS.forEach((link) => {
+      const el = document.getElementById(link.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Update sliding underline position dynamically on tab change and window resize
+  useEffect(() => {
+    const updateUnderline = () => {
+      if (!containerRef.current) return;
+      const activeBtn = containerRef.current.querySelector(`[data-nav-id="${activeId}"]`) as HTMLButtonElement;
+      if (activeBtn) {
+        setUnderlineStyle({
+          left: activeBtn.offsetLeft,
+          width: activeBtn.offsetWidth,
+          opacity: 1,
+        });
+      }
+    };
+
+    updateUnderline();
+    window.addEventListener("resize", updateUnderline);
+    return () => window.removeEventListener("resize", updateUnderline);
+  }, [activeId]);
 
   return (
     <nav
@@ -48,31 +95,52 @@ export default function TopNav() {
         </div>
       </button>
 
-      {/* Nav links */}
+      {/* Nav links with animated sliding underline */}
       {data && (
-        <div className="hidden md:flex items-center gap-1">
+        <div ref={containerRef} className="hidden md:flex items-center gap-1 relative py-1">
           {NAV_LINKS.map((link) => (
             <button
               key={link.id}
-              onClick={() => scrollTo(link.id)}
-              className="px-3 py-1.5 rounded text-xs font-semibold transition-all duration-200"
+              data-nav-id={link.id}
+              onClick={() => {
+                setActiveId(link.id);
+                scrollTo(link.id);
+              }}
+              className="px-3 py-1.5 rounded text-xs font-semibold transition-all duration-200 relative"
               style={{
-                color: "var(--text-muted)",
+                color: activeId === link.id ? "var(--cyan)" : "var(--text-muted)",
                 fontFamily: "JetBrains Mono, monospace",
                 letterSpacing: "0.08em",
+                textShadow: activeId === link.id ? "0 0 8px rgba(0,245,255,0.5)" : "none",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--cyan)";
-                (e.currentTarget as HTMLElement).style.background = "rgba(0,245,255,0.08)";
+                if (activeId !== link.id) {
+                  e.currentTarget.style.color = "var(--cyan)";
+                  e.currentTarget.style.background = "rgba(0,245,255,0.04)";
+                  e.currentTarget.style.textShadow = "0 0 8px rgba(0,245,255,0.3)";
+                }
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-                (e.currentTarget as HTMLElement).style.background = "transparent";
+                if (activeId !== link.id) {
+                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.textShadow = "none";
+                }
               }}
             >
               {link.label}
             </button>
           ))}
+
+          {/* Animated underline */}
+          <div
+            className="absolute bottom-0 h-[2px] transition-all duration-300 ease-out"
+            style={{
+              background: "linear-gradient(90deg, transparent, var(--cyan), transparent)",
+              boxShadow: "0 0 10px var(--cyan)",
+              ...underlineStyle,
+            }}
+          />
         </div>
       )}
 
