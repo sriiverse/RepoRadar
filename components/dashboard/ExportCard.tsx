@@ -214,7 +214,10 @@ export default function ExportCard() {
       
       const problems = getProblemsList(data, recentCommits);
       problems.forEach((p) => {
-        const severityIndicator = p.severity === "critical" ? "[CRITICAL]" : p.severity === "high" ? "[HIGH]" : "[MEDIUM]";
+        const severityIndicator = 
+          p.severity === "critical" ? "[CRITICAL]" : 
+          p.severity === "high" ? "[HIGH]" : 
+          p.severity === "medium" ? "[MEDIUM]" : "[INFO]";
         pdf.text(`- ${severityIndicator} ${p.label}`, 55, yOffset);
         yOffset += 15;
       });

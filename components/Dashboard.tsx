@@ -35,29 +35,33 @@ export default function Dashboard() {
         {/* Row 1: Health Score (large) + Survival Analysis (hero) + Risk Assessment + Risk Insights */}
         <div id="health" className="grid grid-cols-12 gap-4 mb-5">
           {/* Health Score — 3 cols */}
-          <div className="col-span-3 h-full">
+          <div id="health-score-card" className="col-span-3 h-full">
             <HealthScoreCard />
           </div>
           {/* Survival Analysis — 5 cols — THE HERO CARD */}
-          <div className="col-span-5 h-full">
+          <div id="survival-analysis-card" className="col-span-5 h-full">
             <SurvivalAnalysisCard />
           </div>
           {/* Risk Assessment + Risk Insights — 4 cols stacked */}
           <div className="col-span-4 flex flex-col gap-4 h-full">
-            <RiskAssessmentCard />
-            <RiskInsights />
+            <div id="risk-assessment-card" className="h-full">
+              <RiskAssessmentCard />
+            </div>
+            <div id="risk-insights-card" className="h-full">
+              <RiskInsights />
+            </div>
           </div>
         </div>
 
         {/* Row 2: Heatmap + Contributor Distribution + Activity Trend */}
         <div id="commits" className="grid grid-cols-12 gap-4 mb-5">
-          <div className="col-span-6">
+          <div id="commit-heatmap-card" className="col-span-6">
             <CommitHeatmap />
           </div>
           <div id="contributors" className="col-span-3">
             <ContributorDistribution />
           </div>
-          <div className="col-span-3">
+          <div id="activity-trend-card" className="col-span-3">
             <ActivityTrend />
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRepoStore } from "@/store/repoStore";
 
 interface ProblemDetail {
@@ -12,6 +13,7 @@ interface ProblemDetail {
 
 export default function VerdictPanel() {
   const { data } = useRepoStore();
+  const [showConfidenceDetail, setShowConfidenceDetail] = useState(false);
 
   if (!data) return null;
 
@@ -23,11 +25,6 @@ export default function VerdictPanel() {
 
   // 1. Dynamic Overall Health Label Color
   const score = healthScore.total;
-  const scoreColor =
-    score >= 80 ? "var(--green)" :
-    score >= 60 ? "var(--cyan)" :
-    score >= 40 ? "var(--yellow)" :
-    score >= 20 ? "var(--orange)" : "#ff4444";
 
   // UI themes based on riskLevel
   const riskConfig = {
@@ -237,7 +234,7 @@ export default function VerdictPanel() {
   const detectedProblems = getDetectedProblems();
 
   // 3. Sort Problems by Severity
-  const severityRank = { critical: 4, high: 3, medium: 2, low: 1 };
+  const severityRank: { [key: string]: number } = { critical: 4, high: 3, medium: 2, low: 1 };
   const sortedProblems = [...detectedProblems].sort((a, b) => severityRank[b.severity] - severityRank[a.severity]);
 
   // Extract Top 5 unique recommendations
@@ -262,6 +259,226 @@ export default function VerdictPanel() {
   }
 
   const targetScore = Math.min(99, score + calculatedGain);
+
+  // 3.5 Interactive Risk Anchoring Navigation
+  const handleRiskClick = (probId: string) => {
+    let targetId = "";
+    if (probId.includes("BUS") || probId.includes("MAINTAINER") || probId.includes("CONCENTRATION")) {
+      targetId = "survival-analysis-card";
+      if (!document.getElementById(targetId)) {
+        targetId = "contributors";
+      }
+    } else if (probId.includes("RELEASE")) {
+      targetId = "releases";
+    } else if (probId.includes("ACTIVITY") || probId.includes("DEVELOPMENT")) {
+      targetId = "activity-trend-card";
+      if (!document.getElementById(targetId)) {
+        targetId = "commits";
+      }
+    } else if (probId.includes("PR") || probId.includes("ISSUES") || probId.includes("WORKFLOW")) {
+      targetId = "pullrequests";
+    } else if (probId.includes("LICENSE") || probId.includes("DOCUMENTATION")) {
+      targetId = "health-score-card";
+      if (!document.getElementById(targetId)) {
+        targetId = "health";
+      }
+    } else if (probId.includes("TECH")) {
+      targetId = "languages";
+    }
+    
+    if (targetId) {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const originalStyle = el.getAttribute("style") || "";
+        
+        // Dynamic cyan neon pulse ring focus flash
+        el.style.transition = "outline 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease";
+        el.style.outline = "2.5px solid var(--cyan)";
+        el.style.boxShadow = "0 0 35px rgba(0, 245, 255, 0.55)";
+        el.style.transform = "scale(1.025)";
+        
+        setTimeout(() => {
+          el.style.outline = "none";
+          el.style.transform = "none";
+          el.setAttribute("style", originalStyle);
+        }, 1500);
+      }
+    }
+  };
+
+  // 3.6 Confidence Reason Matrix
+  const getConfidenceFactors = () => {
+    const basedOn: string[] = ["Repository metadata"];
+    const missing: string[] = [];
+
+    if (commitActivity.length > 0) {
+      basedOn.push("Commit history");
+    } else {
+      missing.push("Commit history");
+    }
+
+    if (data.contributors.length > 0) {
+      basedOn.push("Contributor graph");
+    } else {
+      missing.push("Contributor graph");
+    }
+
+    if (releaseCadence.totalReleases > 0) {
+      basedOn.push("Release history");
+    } else {
+      missing.push("Release history");
+    }
+
+    if (data.prStats && data.prStats.total > 0) {
+      basedOn.push("Pull Requests");
+    } else {
+      missing.push("Pull Requests");
+    }
+
+    if (data.issueStats && data.issueStats.total > 0) {
+      basedOn.push("Issue discussions");
+    } else {
+      missing.push("Issue discussions");
+    }
+
+    const hasDocker = data.languageBreakdown?.some(l => l.name === "Dockerfile" || l.name === "Docker") ?? false;
+    if (hasDocker || releaseCadence.totalReleases > 0) {
+      basedOn.push("CI/CD configuration");
+    } else {
+      missing.push("CI/CD configuration");
+    }
+
+    return { basedOn, missing };
+  };
+
+  // 3.7 Top Positive Signal Section
+  const getTopPositiveSignal = () => {
+    const signals = [];
+    
+    if (releaseCadence.totalReleases > 10) {
+      signals.push({
+        title: "Strong Release Cadence",
+        desc: `The repository has ${releaseCadence.totalReleases} releases published, demonstrating active versioning and tag lifecycle operations.`,
+        icon: "📦"
+      });
+    }
+    
+    if (data.contributors.length >= 8 && busFactor.busFactor >= 3) {
+      signals.push({
+        title: "Distributed Contributor Ownership",
+        desc: `Backed by ${data.contributors.length} active contributors with a healthy Bus Factor of ${busFactor.busFactor}, reducing key-person exposure.`,
+        icon: "👥"
+      });
+    }
+    
+    if (data.prStats && data.prStats.merged > 10 && data.prStats.avgMergeTimeDays < 4) {
+      signals.push({
+        title: "Responsive Pull Requests",
+        desc: `Merged ${data.prStats.merged} pull requests recently with an average review cycle of only ${data.prStats.avgMergeTimeDays.toFixed(1)} days.`,
+        icon: "⚡"
+      });
+    }
+    
+    if (recentCommits >= 20) {
+      signals.push({
+        title: "High Commit Velocity",
+        desc: `Extremely active developer momentum with ${recentCommits} commits submitted over the past 30 days.`,
+        icon: "🔥"
+      });
+    }
+    
+    if (data.meta.stars >= 50) {
+      signals.push({
+        title: "Active Developer Interest",
+        desc: `Acquired interest from ${data.meta.stars} stargazers, indicating a valuable and recognized open-source codebase.`,
+        icon: "⭐"
+      });
+    }
+    
+    if (healthScore.breakdown.maintenanceScore >= 16) {
+      signals.push({
+        title: "Pristine Documentation",
+        desc: "Maintains a clean and structured layout with comprehensive documentation and responsive pull request gates.",
+        icon: "🛡️"
+      });
+    }
+
+    if (signals.length === 0) {
+      signals.push({
+        title: "Public Open-Source Access",
+        desc: "The codebase is public, standard-structured, and available for developer exploration, cloning, or customization.",
+        icon: "📖"
+      });
+    }
+
+    return signals[0];
+  };
+
+  // 3.8 Suitability Scoreboard
+  const getSuitabilityRatings = () => {
+    const learning = score >= 40 ? 5 : score >= 20 ? 4 : 3;
+    
+    let openSource = 3;
+    if (data.prStats && data.prStats.total > 0 && data.contributors.length >= 5) openSource = 5;
+    else if (data.contributors.length >= 3) openSource = 4;
+    else if (data.contributors.length === 1) openSource = 2;
+    
+    let internalTool = 4;
+    if (busFactor.riskLevel === "CRITICAL") internalTool = 2;
+    else if (busFactor.riskLevel === "HIGH") internalTool = 3;
+    else if (score > 75) internalTool = 5;
+
+    let production = 4;
+    if (busFactor.riskLevel === "CRITICAL") production = 1;
+    else if (busFactor.riskLevel === "HIGH") production = 2;
+    else if (busFactor.riskLevel === "MEDIUM") production = 3;
+    else if (score < 50) production = 2;
+
+    let missionCritical = 3;
+    if (busFactor.riskLevel === "CRITICAL" || busFactor.riskLevel === "HIGH") missionCritical = 1;
+    else if (busFactor.riskLevel === "MEDIUM") missionCritical = 2;
+    else if (score > 80 && busFactor.riskLevel === "LOW") missionCritical = 5;
+    else if (score > 60) missionCritical = 4;
+
+    return [
+      { name: "Learning & Exploration", rating: learning },
+      { name: "Open Source Contribution", rating: openSource },
+      { name: "Internal Tooling", rating: internalTool },
+      { name: "Production Dependency", rating: production },
+      { name: "Mission-Critical Systems", rating: missionCritical },
+    ];
+  };
+
+  // 3.9 Expected Effort Estimation & Typewriter Shaded Progress
+  const getEstimatedEffort = () => {
+    const actionsStr = nextActions.join(" ");
+    if (actionsStr.includes("maintainer") || actionsStr.includes("Bus Factor")) {
+      return "≈ 2–4 weeks (Developer onboarding & training)";
+    }
+    if (actionsStr.includes("releases") || actionsStr.includes("workflow") || actionsStr.includes("Issues")) {
+      return "≈ 1–2 weeks (CI/CD and workflow deployment)";
+    }
+    return "≈ 1–3 days (Configuration tweaks & documentation)";
+  };
+
+  const getProgressBar = (current: number, target: number) => {
+    const segments = 10;
+    const currentFilled = Math.min(segments, Math.max(0, Math.round((current / 100) * segments)));
+    const targetFilled = Math.min(segments, Math.max(0, Math.round((target / 100) * segments)));
+    
+    let barStr = "";
+    for (let i = 0; i < segments; i++) {
+      if (i < currentFilled) {
+        barStr += "█";
+      } else if (i < targetFilled) {
+        barStr += "▒";
+      } else {
+        barStr += "░";
+      }
+    }
+    return `[${barStr}]`;
+  };
 
   // 4. Skimmable Summary Block Generator
   const getVerdictSummaryParagraphs = () => {
@@ -339,92 +556,97 @@ export default function VerdictPanel() {
 
   // 6. Dynamic Narrative Repository Timeline Generator
   const getTimelineEvents = () => {
-    const events: Array<{ dateStr: string; label: string; icon: string; bar?: string }> = [];
+    const events: Array<{ date: Date; dateStr: string; label: string; icon: string; bar?: string }> = [];
 
     // Created event
     const createdDate = new Date(data.meta.createdAt);
     const createdMonthStr = createdDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
     events.push({
+      date: createdDate,
       dateStr: createdMonthStr,
       label: "Repository Created",
-      icon: "✓",
+      icon: "🌱",
     });
 
-    // Group commits by month
-    const monthlyCommits: { [key: string]: { total: number; weeks: Array<{ week: number; days: number[]; total: number }> } } = {};
+    // Releases Check
+    if (data.releases && data.releases.length > 0) {
+      const firstRelease = data.releases[data.releases.length - 1];
+      const firstRelDate = new Date(firstRelease.publishedAt);
+      events.push({
+        date: firstRelDate,
+        dateStr: firstRelDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        label: `First Release: ${firstRelease.tag}`,
+        icon: "📦",
+      });
+
+      if (data.releases.length > 1) {
+        const latestRelease = data.releases[0];
+        const latestRelDate = new Date(latestRelease.publishedAt);
+        if (latestRelDate.getTime() - firstRelDate.getTime() > 30 * 24 * 3600 * 1000) {
+          events.push({
+            date: latestRelDate,
+            dateStr: latestRelDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+            label: `Latest Release: ${latestRelease.tag}`,
+            icon: "🚀",
+          });
+        }
+      }
+    }
+
+    // Peak commit activity
+    const monthlyCommits: { [key: string]: { total: number; weeks: Array<{ week: number; days: number[]; total: number }>; date: Date } } = {};
     for (const week of commitActivity) {
       const date = new Date(week.week * 1000);
       const monthKey = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
       if (!monthlyCommits[monthKey]) {
-        monthlyCommits[monthKey] = { total: 0, weeks: [] };
+        monthlyCommits[monthKey] = { total: 0, weeks: [], date };
       }
       monthlyCommits[monthKey].total += week.total;
       monthlyCommits[monthKey].weeks.push(week);
     }
 
-    const monthKeys = Object.keys(monthlyCommits).sort((a, b) => {
-      return new Date(a).getTime() - new Date(b).getTime();
-    });
-
-    // Find peak activity month
-    let peakMonth = "";
+    const monthKeys = Object.keys(monthlyCommits);
+    let peakMonthKey = "";
     let peakCount = 0;
     for (const mKey of monthKeys) {
       if (monthlyCommits[mKey].total > peakCount) {
         peakCount = monthlyCommits[mKey].total;
-        peakMonth = mKey;
+        peakMonthKey = mKey;
       }
     }
 
-    if (peakMonth && peakMonth !== createdMonthStr && peakCount > 0) {
+    if (peakMonthKey && peakCount > 0) {
       const barLength = Math.min(10, Math.max(2, Math.round((peakCount / 150) * 10)));
       events.push({
-        dateStr: peakMonth,
-        label: "Peak Activity Month",
+        date: monthlyCommits[peakMonthKey].date,
+        dateStr: peakMonthKey,
+        label: `Peak Commit Activity`,
         icon: "⚡",
         bar: "█".repeat(barLength) + "░".repeat(10 - barLength),
       });
     }
 
-    // Release Milestone Check (midway point)
-    const midIndex = Math.floor(monthKeys.length / 2);
-    const midMonth = monthKeys[midIndex];
-    if (midMonth && midMonth !== createdMonthStr && midMonth !== peakMonth) {
-      if (releaseCadence.totalReleases === 0) {
-        events.push({
-          dateStr: midMonth,
-          label: "Releases Pending",
-          icon: "⚠",
-        });
-      } else {
-        events.push({
-          dateStr: midMonth,
-          label: `Active Releases Published`,
-          icon: "✓",
-        });
-      }
-    }
-
-    // Contributor concentration shift
-    const recentMonthKey = monthKeys[monthKeys.length - 2];
-    if (recentMonthKey && recentMonthKey !== createdMonthStr && recentMonthKey !== peakMonth && recentMonthKey !== midMonth) {
-      if (busFactor.topContributorPercentage > 75) {
-        events.push({
-          dateStr: recentMonthKey,
-          label: "Single Developer Dominance",
-          icon: "⚠⚠",
-        });
-      } else {
-        events.push({
-          dateStr: recentMonthKey,
-          label: "Contributor Diversity Stable",
-          icon: "✓",
-        });
-      }
+    // Community / Stars Milestone
+    const midTime = new Date((createdDate.getTime() + Date.now()) / 2);
+    if (data.meta.stars >= 50) {
+      events.push({
+        date: midTime,
+        dateStr: "Growth",
+        label: `Passed ${data.meta.stars} Stars`,
+        icon: "⭐",
+      });
+    } else if (data.contributors.length >= 5) {
+      events.push({
+        date: midTime,
+        dateStr: "Team",
+        label: `Grew to ${data.contributors.length} Authors`,
+        icon: "👥",
+      });
     }
 
     // Current State
     events.push({
+      date: new Date(),
       dateStr: "Current",
       label: busFactor.riskLevel === "CRITICAL"
         ? "Critical Maintainer Risk"
@@ -432,32 +654,46 @@ export default function VerdictPanel() {
         ? "High Contributor Concentration"
         : busFactor.riskLevel === "MEDIUM"
         ? "Moderate Maintenance Exposure"
-        : "Healthy Repository Autonomy",
+        : "Healthy Distributed Ownership",
       icon: busFactor.riskLevel === "CRITICAL" || busFactor.riskLevel === "HIGH" ? "🔴" : busFactor.riskLevel === "MEDIUM" ? "🟠" : "🟢",
     });
 
-    // Dedup events by dateStr to prevent layout conflicts
+    // Dedup events, sort chronologically
     const seen = new Set();
     const uniqueEvents = [];
-    for (const ev of events) {
-      if (!seen.has(ev.dateStr)) {
-        seen.add(ev.dateStr);
+    const sorted = events.sort((a, b) => a.date.getTime() - b.date.getTime());
+    for (const ev of sorted) {
+      const key = ev.dateStr + "_" + ev.label.slice(0, 8);
+      if (!seen.has(key)) {
+        seen.add(key);
         uniqueEvents.push(ev);
       }
     }
 
     return uniqueEvents.slice(0, 5);
   };
-
   const timelineEvents = getTimelineEvents();
   const confidence = Math.min(99, 88 + (data.contributors.length > 5 ? 4 : 1) + (releaseCadence.totalReleases > 0 ? 4 : 1) + (recentCommits > 10 ? 3 : 1));
+  const confidenceFactors = getConfidenceFactors();
+  const suitabilityRatings = getSuitabilityRatings();
+  const bestSignal = getTopPositiveSignal();
+  const estimatedEffort = getEstimatedEffort();
+
+  const renderStars = (rating: number) => {
+    return (
+      <span className="text-sm tracking-widest select-none" style={{ color: "var(--yellow)", textShadow: "0 0 5px rgba(255,215,0,0.3)" }}>
+        {"★".repeat(rating)}
+        <span className="text-slate-800">{"☆".repeat(5 - rating)}</span>
+      </span>
+    );
+  };
 
   return (
     <div
       id="verdict"
       className="relative overflow-hidden w-full animate-fade-in-up mt-8"
       style={{
-        background: "rgba(6, 8, 16, 0.95)",
+        background: "rgba(6, 8, 16, 0.96)",
         border: `1px solid ${cfg.border}`,
         borderRadius: "16px",
         boxShadow: `0 0 35px ${cfg.glow}, inset 0 0 30px rgba(0,0,0,0.85)`,
@@ -470,81 +706,146 @@ export default function VerdictPanel() {
         boxShadow: `0 0 15px ${cfg.color}`,
       }} />
 
-      <div className="p-8 font-mono">
-        {/* Header Block */}
+      <div className="p-8 font-mono relative">
+        
+        {/* Document Header Line */}
+        <div style={{ borderTop: "3px double rgba(255,255,255,0.12)", margin: "0 0 20px 0" }} />
+        
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-          <div className="flex items-center gap-4">
-            <span className="text-3xl animate-pulse">🤖</span>
+          <div>
+            <h2 className="text-xl font-black tracking-tight" style={{
+              color: "var(--cyan)",
+              textShadow: "0 0 15px rgba(0,245,255,0.25)",
+              fontFamily: "JetBrains Mono, monospace",
+            }}>
+              ⚙️ REPOSITORY ASSESSMENT REPORT
+            </h2>
+            <div className="text-[9px] tracking-[0.25em] font-bold text-slate-500 uppercase mt-1">
+              AUDIT REF: {data.meta.name.toUpperCase()}-{data.meta.createdAt.slice(0, 4)}-VERDICT
+            </div>
+          </div>
+
+          {/* Typewriter metadata blocks */}
+          <div className="flex flex-wrap items-center gap-6 text-xs">
+            <div className="flex items-center gap-2 p-1.5 rounded border border-slate-900 bg-slate-950/60">
+              <span className="text-slate-500">STATUS:</span>
+              <span style={{ color: cfg.color }} className="font-bold uppercase tracking-wider flex items-center gap-1">
+                <span className="animate-pulse">{busFactor.riskLevel === "CRITICAL" || busFactor.riskLevel === "HIGH" ? "🔴" : busFactor.riskLevel === "MEDIUM" ? "🟠" : "🟢"}</span>
+                {busFactor.riskLevel} RISK
+              </span>
+            </div>
+
+            {/* Clickable/Hoverable Confidence Cell */}
+            <div 
+              className="relative flex items-center gap-2 p-1.5 rounded border border-slate-900 bg-slate-950/60 cursor-help transition-all hover:border-slate-800"
+              onClick={() => setShowConfidenceDetail(!showConfidenceDetail)}
+              onMouseEnter={() => setShowConfidenceDetail(true)}
+              onMouseLeave={() => setShowConfidenceDetail(false)}
+            >
+              <span className="text-slate-500">CONFIDENCE:</span>
+              <span className="font-bold text-cyan-400 text-shadow-cyan">{confidence}%</span>
+              
+              {/* Confidence Details Matrix Popover */}
+              {showConfidenceDetail && (
+                <div className="absolute right-0 top-full mt-2.5 z-50 p-4 rounded-xl text-left bg-slate-950/98 border border-slate-800 shadow-2xl font-mono text-xs w-[280px]">
+                  <div className="font-bold text-cyan-400 mb-2 flex items-center gap-1.5">
+                    <span>🔬</span>
+                    <span>Confidence Score Matrix</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-[9px] text-slate-500 uppercase tracking-widest border-b border-slate-900 pb-1 mb-1 font-semibold">Verified Telemetry</div>
+                      {confidenceFactors.basedOn.map((f, idx) => (
+                        <div key={idx} className="text-emerald-400 flex items-center gap-1.5 py-0.5">
+                          <span className="font-bold">✓</span>
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {confidenceFactors.missing.length > 0 && (
+                      <div>
+                        <div className="text-[9px] text-slate-500 uppercase tracking-widest border-b border-slate-900 pb-1 mb-1 font-semibold">Missing Checkpoints</div>
+                        {confidenceFactors.missing.map((f, idx) => (
+                          <div key={idx} className="text-slate-500 flex items-center gap-1.5 py-0.5">
+                            <span className="font-semibold">•</span>
+                            <span>{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ borderTop: "3px double rgba(255,255,255,0.12)", margin: "0 0 24px 0" }} />
+
+        {/* 2-Column Grid splitting Summary & Evaluation metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+          
+          {/* Left Column: Summary + Best Signal (lg:col-span-7) */}
+          <div className="lg:col-span-7 space-y-6">
             <div>
-              <h2 className="text-2xl font-black tracking-tight animate-pulse-glow" style={{
-                color: cfg.color,
-                textShadow: `0 0 20px ${cfg.color}40`,
-                fontFamily: "JetBrains Mono, monospace",
-              }}>
-                🤖 AI VERDICT
-              </h2>
-              <div className="text-[9px] tracking-[0.25em] font-bold text-slate-500 uppercase mt-0.5">
-                RADAR SYNTHESIS REPORT
+              <div className="text-[10px] tracking-widest text-slate-500 uppercase mb-2">
+                Executive Summary
               </div>
-            </div>
-          </div>
-
-          {/* Meters block */}
-          <div className="flex flex-wrap items-center gap-8">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">
-                Overall Health
-              </div>
-              <div className="text-xl font-black flex items-baseline gap-1 justify-end">
-                <span style={{ color: scoreColor, textShadow: `0 0 8px ${scoreColor}40` }}>{score}</span>
-                <span className="text-slate-600 text-xs">/100</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded ml-1.5 font-sans" style={{
-                  background: `${scoreColor}15`,
-                  color: scoreColor,
-                  border: `1px solid ${scoreColor}30`,
-                }}>{healthScore.label}</span>
+              <div className="text-slate-300 leading-relaxed text-sm space-y-3 font-sans">
+                {getVerdictSummaryParagraphs().map((para, idx) => (
+                  <p key={idx}>{para}</p>
+                ))}
               </div>
             </div>
 
-            <div className="text-right">
-              <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">
-                Confidence
+            {/* Standout Positive Signal block */}
+            <div className="p-4 rounded-xl border border-yellow-500/15" style={{ background: "rgba(255,215,0,0.02)" }}>
+              <div className="flex items-center gap-2 text-xs font-bold text-yellow-400 uppercase tracking-widest mb-1.5">
+                <span>🏆</span>
+                <span>Standout Signal: {bestSignal.title}</span>
               </div>
-              <div className="text-xl font-black" style={{ color: "var(--cyan)", textShadow: "0 0 8px rgba(0,245,255,0.4)" }}>
-                {confidence}%
-              </div>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">{bestSignal.desc}</p>
             </div>
           </div>
+
+          {/* Right Column: Would I Use This Ratings (lg:col-span-5) */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Rating Board */}
+            <div className="p-5 rounded-xl border border-slate-900 bg-slate-950/40">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-900 pb-2">
+                👥 RepoRadar Recommendation Ratings
+              </div>
+              <div className="space-y-3 font-sans">
+                {suitabilityRatings.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300">{r.name}</span>
+                    <div className="flex items-center gap-2">
+                      {renderStars(r.rating)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
-        {/* Separator 1 */}
+        {/* Separator 3 */}
         <div className="h-[1px] mb-6" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.06), transparent)" }} />
 
-        {/* Summary Block (3 paragraphs layout) */}
-        <div className="mb-6">
-          <div className="text-[10px] tracking-widest text-slate-500 uppercase mb-2">
-            Summary
-          </div>
-          <div className="text-slate-300 leading-relaxed text-sm md:text-base space-y-3" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-            {getVerdictSummaryParagraphs().map((para, idx) => (
-              <p key={idx}>{para}</p>
-            ))}
-          </div>
-        </div>
-
-        {/* Separator 2 */}
-        <div className="h-[1px] mb-6" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.06), transparent)" }} />
-
-        {/* 3-Column Content Block */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Column 1: Strengths */}
+        {/* 3-Column Content Block (Strengths, Risks, Target Settings) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          
+          {/* Strengths */}
           <div className="space-y-3">
             <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1 flex items-center gap-1.5">
               <span style={{ color: "var(--green)" }}>✓</span> Strengths
             </div>
             <div className="space-y-2">
               {strengths.map((item, i) => (
-                <div key={i} className="flex items-start gap-2.5 text-xs text-slate-300 leading-relaxed">
+                <div key={i} className="flex items-start gap-2.5 text-xs text-slate-300 leading-relaxed font-sans">
                   <span className="font-bold" style={{ color: "var(--green)" }}>✓</span>
                   <span>{item}</span>
                 </div>
@@ -552,36 +853,53 @@ export default function VerdictPanel() {
             </div>
           </div>
 
-          {/* Column 2: Risks (Sorted by Severity) */}
+          {/* Risks (Sorted by Severity, interactive scroll clicks) */}
           <div className="space-y-3">
             <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1 flex items-center gap-1.5">
               <span style={{ color: cfg.color }}>⚠</span> Risks
             </div>
             <div className="space-y-2">
               {sortedProblems.map((prob, i) => {
-                const icon = prob.severity === "critical" ? "🔴" : prob.severity === "high" ? "🟠" : "🟡";
+                const icon = prob.severity === "critical" ? "🔴" : prob.severity === "high" ? "🟠" : prob.severity === "medium" ? "🟡" : "🔵";
                 return (
-                  <div key={i} className="flex items-start gap-2.5 text-xs text-slate-300 leading-relaxed">
-                    <span className="font-bold">{icon}</span>
-                    <span>{prob.label}</span>
+                  <div 
+                    key={i} 
+                    onClick={() => handleRiskClick(prob.id)}
+                    title="Click to locate on dashboard"
+                    className="flex items-center justify-between p-1.5 rounded hover:bg-slate-900/60 cursor-pointer transition-all group font-sans"
+                  >
+                    <div className="flex items-start gap-2 text-xs text-slate-300 leading-relaxed">
+                      <span>{icon}</span>
+                      <span className="group-hover:text-cyan transition-colors">{prob.label}</span>
+                    </div>
+                    <span 
+                      className="text-[8px] uppercase px-1 py-0.5 rounded font-bold tracking-widest select-none ml-2 shrink-0 border"
+                      style={{
+                        background: prob.severity === "critical" ? "rgba(255,68,68,0.06)" : prob.severity === "high" ? "rgba(255,107,53,0.06)" : prob.severity === "medium" ? "rgba(255,215,0,0.06)" : "rgba(0,245,255,0.06)",
+                        color: prob.severity === "critical" ? "#ff4444" : prob.severity === "high" ? "var(--orange)" : prob.severity === "medium" ? "var(--yellow)" : "var(--cyan)",
+                        borderColor: prob.severity === "critical" ? "rgba(255,68,68,0.2)" : prob.severity === "high" ? "rgba(255,107,53,0.2)" : prob.severity === "medium" ? "rgba(255,215,0,0.2)" : "rgba(0,245,255,0.2)"
+                      }}
+                    >
+                      {prob.severity}
+                    </span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Column 3: Recommendation (Visually Split) */}
+          {/* Recommendations split list */}
           <div className="space-y-4">
             <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1">
-              Recommendation
+              Environment Exclusions
             </div>
             
             {/* Recommended block */}
             <div className="space-y-1.5 p-3 rounded-lg" style={{ background: "rgba(0,255,136,0.02)", border: "1px solid rgba(0,255,136,0.08)" }}>
-              <div className="text-xs font-bold text-green-400 flex items-center gap-1.5 mb-1">
-                <span>✓</span> Recommended For
+              <div className="text-[10px] font-bold text-green-400 flex items-center gap-1.5 mb-1 uppercase tracking-wider">
+                <span>✓</span> Recommended Environment
               </div>
-              <ul className="text-[11px] space-y-1 text-slate-300 pl-4 list-disc">
+              <ul className="text-[11px] space-y-1 text-slate-300 pl-4 list-disc font-sans">
                 {recommendedUses.map((use, i) => (
                   <li key={i}>{use}</li>
                 ))}
@@ -590,10 +908,10 @@ export default function VerdictPanel() {
 
             {/* Not Recommended block */}
             <div className="space-y-1.5 p-3 rounded-lg" style={{ background: "rgba(255,68,68,0.02)", border: "1px solid rgba(255,68,68,0.08)" }}>
-              <div className="text-xs font-bold text-red-400 flex items-center gap-1.5 mb-1">
-                <span>✕</span> Not Recommended
+              <div className="text-[10px] font-bold text-red-400 flex items-center gap-1.5 mb-1 uppercase tracking-wider">
+                <span>✕</span> Excluded Environment
               </div>
-              <ul className="text-[11px] space-y-1 text-slate-300 pl-4 list-disc">
+              <ul className="text-[11px] space-y-1 text-slate-300 pl-4 list-disc font-sans">
                 {notRecommendedUses.map((use, i) => (
                   <li key={i}>{use}</li>
                 ))}
@@ -607,25 +925,24 @@ export default function VerdictPanel() {
         
         <div className="space-y-4">
           <div className="text-xs tracking-widest text-slate-400 font-bold uppercase">
-            📅 REPOSITORY TIMELINE
+            📅 DYNAMIC REPOSITORY TIMELINE
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 relative">
-            {/* Horizontal line for connecting dots (hidden on mobile) */}
             <div className="hidden sm:block absolute top-[28px] left-[10%] right-[10%] h-[2px] bg-slate-800 z-0" />
             
             {timelineEvents.map((ev, i) => (
               <div key={i} className="flex flex-col items-center text-center relative z-10 p-3 rounded-xl" style={{
-                background: "rgba(0,0,0,0.2)",
+                background: "rgba(0,0,0,0.25)",
                 border: "1px solid rgba(255,255,255,0.03)",
               }}>
-                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1.5">
+                <div className="text-[9px] font-mono text-slate-500 uppercase tracking-wider mb-1.5">
                   {ev.dateStr}
                 </div>
                 
                 {/* Timeline node icon */}
                 <div className="w-8 h-8 rounded-full flex items-center justify-center mb-2 font-bold" style={{
-                  background: ev.icon === "🔴" ? "rgba(255,68,68,0.15)" : ev.icon === "🟠" ? "rgba(255,107,53,0.15)" : ev.icon === "🟢" || ev.icon === "✓" ? "rgba(0,255,136,0.15)" : "rgba(0,245,255,0.15)",
+                  background: ev.icon === "🔴" ? "rgba(255,68,68,0.12)" : ev.icon === "🟠" ? "rgba(255,107,53,0.12)" : ev.icon === "🟢" || ev.icon === "✓" ? "rgba(0,255,136,0.12)" : "rgba(0,245,255,0.12)",
                   border: `1px solid ${ev.icon === "🔴" ? "#ff4444" : ev.icon === "🟠" ? "var(--orange)" : ev.icon === "🟢" || ev.icon === "✓" ? "var(--green)" : "var(--cyan)"}`,
                   color: ev.icon === "🔴" ? "#ff4444" : ev.icon === "🟠" ? "var(--orange)" : ev.icon === "🟢" || ev.icon === "✓" ? "var(--green)" : "var(--cyan)",
                   boxShadow: `0 0 10px ${ev.icon === "🔴" ? "rgba(255,68,68,0.2)" : ev.icon === "🟠" ? "rgba(255,107,53,0.2)" : ev.icon === "🟢" || ev.icon === "✓" ? "rgba(0,255,136,0.2)" : "rgba(0,245,255,0.2)"}`,
@@ -633,7 +950,7 @@ export default function VerdictPanel() {
                   {ev.icon}
                 </div>
 
-                <div className="text-[10px] text-slate-200 font-semibold leading-relaxed">
+                <div className="text-[10px] text-slate-200 font-semibold leading-relaxed font-sans">
                   {ev.label}
                 </div>
                 
@@ -647,18 +964,18 @@ export default function VerdictPanel() {
           </div>
         </div>
 
-        {/* Separator 3: Next Actions */}
+        {/* Separator 4: Next Actions */}
         {nextActions.length > 0 && (
           <>
             <div className="h-[1px] my-6" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.06), transparent)" }} />
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
               {/* Left/Center: Actions list */}
-              <div className="md:col-span-8 space-y-3">
+              <div className="md:col-span-7 space-y-3">
                 <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1">
                   NEXT ACTIONS
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 font-sans">
                   {nextActions.map((act, i) => (
                     <div key={i} className="flex items-center gap-2.5 text-xs text-slate-300">
                       <span className="font-bold text-green-400" style={{ color: "var(--green)" }}>✓</span>
@@ -668,28 +985,36 @@ export default function VerdictPanel() {
                 </div>
               </div>
 
-              {/* Right: Estimated Health Increase */}
-              <div className="md:col-span-4 p-4 rounded-xl flex items-center justify-between" style={{
+              {/* Right: Richer expected improvements & progress slider */}
+              <div className="md:col-span-5 p-4 rounded-xl flex flex-col gap-3" style={{
                 background: "rgba(0,245,255,0.03)",
                 border: "1px solid rgba(0,245,255,0.08)",
               }}>
-                <div>
-                  <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">
-                    Estimated Health Increase
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+                    Expected Improvement
                   </div>
-                  <div className="flex items-center gap-3 font-mono">
-                    <span className="text-xl font-bold text-slate-400">{score}</span>
+                  <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-sans">
+                    Potential +{targetScore - score} pts
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-400">{score}</span>
                     <span className="text-slate-600 text-xs">→</span>
-                    <span className="text-2xl font-black" style={{ color: "var(--green)", textShadow: "0 0 10px rgba(0,255,136,0.4)" }}>
+                    <span className="text-lg font-black text-green-400" style={{ textShadow: "0 0 10px rgba(0,255,136,0.3)" }}>
                       {targetScore}
                     </span>
                   </div>
+                  <div className="text-xs font-mono text-cyan-400 tracking-wider">
+                    {getProgressBar(score, targetScore)}
+                  </div>
                 </div>
-                
-                {/* Visual change indicator */}
-                <div className="text-xs font-bold font-mono text-right" style={{ color: "var(--green)" }}>
-                  <div>Potential +{targetScore - score} pts</div>
-                  <div className="text-[9px] text-slate-500 font-normal">if recommendations are followed</div>
+
+                <div className="border-t border-slate-900 pt-2 flex items-center justify-between text-[10px]">
+                  <span className="text-slate-500 uppercase tracking-wider font-semibold">Estimated Effort:</span>
+                  <span className="text-slate-300 font-medium">{estimatedEffort}</span>
                 </div>
               </div>
             </div>
