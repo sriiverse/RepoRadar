@@ -122,14 +122,29 @@ export default function CommitHeatmap() {
   }
 
   let activeCurrentStreak = 0;
-  for (let i = sortedValues.length - 1; i >= 0; i--) {
-    if (sortedValues[i].count > 0) {
-      activeCurrentStreak++;
-    } else {
-      if (i === sortedValues.length - 1 && sortedValues[i].count === 0) {
-        continue;
+  const lastIndex = sortedValues.length - 1;
+  if (lastIndex >= 0) {
+    const todayCommits = sortedValues[lastIndex].count;
+    const yesterdayCommits = lastIndex >= 1 ? sortedValues[lastIndex - 1].count : 0;
+
+    if (todayCommits > 0) {
+      for (let i = lastIndex; i >= 0; i--) {
+        if (sortedValues[i].count > 0) {
+          activeCurrentStreak++;
+        } else {
+          break;
+        }
       }
-      break;
+    } else if (yesterdayCommits > 0) {
+      for (let i = lastIndex - 1; i >= 0; i--) {
+        if (sortedValues[i].count > 0) {
+          activeCurrentStreak++;
+        } else {
+          break;
+        }
+      }
+    } else {
+      activeCurrentStreak = 0;
     }
   }
 
@@ -140,22 +155,22 @@ export default function CommitHeatmap() {
     >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-1">
         <div className="cyber-label">◆ COMMIT ACTIVITY HEATMAP</div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs" style={{ fontFamily: "JetBrains Mono, monospace" }}>
           <div>
             <span style={{ color: "var(--cyan)" }}>{totalCommits.toLocaleString()}</span>
-            <span style={{ color: "var(--text-muted)" }}> commits</span>
+            <span style={{ color: "var(--text-muted)" }}> Commits</span>
           </div>
           <div>
             <span style={{ color: "#ff00ff" }}>{activeDays}</span>
-            <span style={{ color: "var(--text-muted)" }}> active days</span>
+            <span style={{ color: "var(--text-muted)" }}> Active Days</span>
           </div>
           <div>
-            <span style={{ color: "#00f5ff" }}>{peakCommits}</span>
-            <span style={{ color: "var(--text-muted)" }}> peak/day</span>
+            <span style={{ color: "#00f5ff" }}>Peak: {peakCommits}/day</span>
           </div>
           <div>
-            <span style={{ color: "#a855f7" }}>{activeCurrentStreak}d</span>
-            <span style={{ color: "var(--text-muted)" }}> streak <span className="opacity-50 text-[10px]">(max {longestStreak}d)</span></span>
+            <span style={{ color: "#a855f7" }}>Current: {activeCurrentStreak}d</span>
+            <span className="text-slate-700 px-1.5">|</span>
+            <span style={{ color: "#a855f7" }}>Longest: {longestStreak}d</span>
           </div>
         </div>
       </div>
