@@ -10,14 +10,22 @@ export default function ActivityTrend() {
   if (!data) return null;
   const { commitActivity } = data;
 
-  const chartData = commitActivity.slice(-24).map((w, i) => ({
+  const last24Weeks = commitActivity.slice(-24);
+  const chartData = last24Weeks.map((w, i) => ({
     week: i + 1,
     commits: w.total,
     label: new Date(w.week * 1000).toLocaleDateString("en-US", { month: "short" }),
   }));
 
-  const maxCommits = Math.max(...chartData.map((d) => d.commits), 1);
-  const avgCommits = Math.round(chartData.reduce((s, d) => s + d.commits, 0) / chartData.length);
+  // Flatten all days in the 24-week period to compute daily stats
+  const allDays = last24Weeks.flatMap((w) => w.days);
+  const peakDaily = Math.max(...allDays, 0);
+
+  const totalCommits = last24Weeks.reduce((sum, w) => sum + w.total, 0);
+  const averageDaily = Math.round((totalCommits / (last24Weeks.length * 7)) * 10) / 10;
+
+  // Weekly commits average for reference line positioning
+  const weeklyAvg = Math.round(totalCommits / last24Weeks.length);
 
   const CustomTooltip = ({ active, payload, label }: {
     active?: boolean;
@@ -54,7 +62,7 @@ export default function ActivityTrend() {
         boxShadow: "0 0 20px rgba(0,245,255,0.08), inset 0 0 30px rgba(0,0,0,0.4)",
       }}
     >
-      <div className="cyber-label mb-1">◆ ACTIVITY TREND</div>
+      <div className="cyber-label mb-1">ACTIVITY TREND</div>
       <div className="text-xs mb-3" style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
         COMMIT FREQUENCY · LAST 24 WEEKS
       </div>
@@ -92,11 +100,11 @@ export default function ActivityTrend() {
 
           {/* Average reference line */}
           <ReferenceLine
-            y={avgCommits}
+            y={weeklyAvg}
             stroke="rgba(255,215,0,0.2)"
             strokeDasharray="4 4"
             label={{
-              value: `avg ${avgCommits}`,
+              value: `weekly avg ${weeklyAvg}`,
               fill: "rgba(255,215,0,0.4)",
               fontSize: 8,
               fontFamily: "JetBrains Mono",
@@ -128,7 +136,7 @@ export default function ActivityTrend() {
 
       {/* Stats strip */}
       <div
-        className="flex justify-between mt-2 pt-2 text-xs"
+        className="flex justify-between mt-2 pt-2 text-[10px]"
         style={{
           borderTop: "1px solid rgba(0,245,255,0.06)",
           fontFamily: "JetBrains Mono, monospace",
@@ -136,14 +144,14 @@ export default function ActivityTrend() {
         }}
       >
         <div>
-          PEAK <span style={{ color: "#ff00ff", fontWeight: "700" }}>{maxCommits}</span>
+          PEAK DAILY <span style={{ color: "#ff00ff", fontWeight: "700" }}>{peakDaily}</span>
         </div>
         <div>
-          AVG <span style={{ color: "#00f5ff", fontWeight: "700" }}>{avgCommits}</span>
+          AVERAGE DAILY <span style={{ color: "#00f5ff", fontWeight: "700" }}>{averageDaily}</span>
         </div>
         <div>
-          TOTAL <span style={{ color: "#00ff88", fontWeight: "700" }}>
-            {chartData.reduce((s, d) => s + d.commits, 0)}
+          TOTAL COMMITS <span style={{ color: "#00ff88", fontWeight: "700" }}>
+            {totalCommits}
           </span>
         </div>
       </div>

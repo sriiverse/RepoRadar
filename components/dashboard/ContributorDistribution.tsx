@@ -46,7 +46,7 @@ export default function ContributorDistribution() {
 
   return (
     <div className="glass-card bounce-card p-5 h-full">
-      <div className="cyber-label">◆ CONTRIBUTOR DISTRIBUTION</div>
+      <div className="cyber-label">CONTRIBUTOR DISTRIBUTION</div>
 
       <div className="flex items-center gap-4">
         <ResponsiveContainer width={130} height={130}>
@@ -107,14 +107,20 @@ export default function ContributorDistribution() {
             </div>
           ))}
           <div
-            className="text-xs pt-1 mt-2"
+            className="text-[11px] pt-1.5 mt-2 space-y-0.5"
             style={{
               color: "var(--text-muted)",
               fontFamily: "JetBrains Mono, monospace",
               borderTop: "1px solid rgba(0,245,255,0.08)",
             }}
           >
-            Total {data.contributors.length} contributors
+            <div>{data.contributors.length} Contributors</div>
+            <div style={{ color: "var(--text-secondary)" }}>
+              <span className="font-bold" style={{ color: "var(--magenta)" }}>
+                {busFactor.topContributorPercentage}%
+              </span>{" "}
+              ownership by top contributor
+            </div>
           </div>
         </div>
       </div>

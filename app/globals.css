@@ -459,3 +459,43 @@ body {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 0.75rem !important;
 }
+
+/* ──────────────────────────────────────────────
+   CUSTOM INTERACTIVE TOOLTIPS
+   ────────────────────────────────────────────── */
+.tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: 220px;
+  background-color: rgba(9, 10, 25, 0.96);
+  color: var(--text-secondary);
+  border: 1px solid rgba(0, 245, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 100;
+  bottom: 130%;
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  transform: translateY(4px);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 245, 255, 0.1);
+  pointer-events: none;
+  font-weight: normal;
+  text-transform: none;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+

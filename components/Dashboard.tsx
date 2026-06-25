@@ -26,14 +26,11 @@ export default function Dashboard() {
       {/* Top navigation replaces sidebar */}
       <TopNav />
 
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
         {/* Repo Header */}
-        <div className="mb-5">
+        <div className="mb-8">
           <RepoHeader />
         </div>
-
-        {/* VERDICT PANEL — full width, first thing they see */}
-        <VerdictPanel />
 
         {/* Row 1: Health Score (large) + Survival Analysis (hero) + Risk Assessment + Risk Insights */}
         <div id="health" className="grid grid-cols-12 gap-4 mb-5">
@@ -81,6 +78,9 @@ export default function Dashboard() {
             <ExportCard />
           </div>
         </div>
+
+        {/* VERDICT PANEL — full width, relocated to the bottom fold */}
+        <VerdictPanel />
 
         {/* Footer */}
         <footer className="mt-10 pt-6 text-center" style={{ borderTop: "1px solid rgba(0,245,255,0.08)" }}>

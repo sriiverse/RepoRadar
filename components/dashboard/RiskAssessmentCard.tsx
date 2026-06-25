@@ -17,8 +17,8 @@ export default function RiskAssessmentCard() {
       bg: "rgba(0,255,136,0.08)",
       border: "rgba(0,255,136,0.25)",
       icon: "🛡️",
-      verdict: "Safe to adopt",
-      description: "Repository is actively maintained with healthy contributor distribution and fast response times.",
+      verdict: "Recommended for production",
+      description: "Healthy contributor diversity and active maintenance make this safe for mission-critical systems.",
     },
     MEDIUM: {
       label: "MEDIUM RISK",
@@ -27,8 +27,8 @@ export default function RiskAssessmentCard() {
       bg: "rgba(255,215,0,0.08)",
       border: "rgba(255,215,0,0.25)",
       icon: "⚠️",
-      verdict: "Use with caution",
-      description: "Some concentration risk detected. Monitor contributor activity before production use.",
+      verdict: "Suitable with internal support",
+      description: "Moderate concentration risk. Acceptable if your team has the resources to monitor or patch internally.",
     },
     HIGH: {
       label: "HIGH RISK",
@@ -37,8 +37,8 @@ export default function RiskAssessmentCard() {
       bg: "rgba(255,107,53,0.08)",
       border: "rgba(255,107,53,0.25)",
       icon: "🔴",
-      verdict: "Significant exposure",
-      description: "Contributor concentration is dangerously high. Few individuals control most of the codebase.",
+      verdict: "Not recommended for mission-critical production",
+      description: "High contributor concentration. Increase contributor diversity first or prepare an internal fork strategy.",
     },
     CRITICAL: {
       label: "CRITICAL RISK",
@@ -47,8 +47,8 @@ export default function RiskAssessmentCard() {
       bg: "rgba(255,68,68,0.08)",
       border: "rgba(255,68,68,0.3)",
       icon: "☠️",
-      verdict: "Avoid for production",
-      description: "Single contributor dominates. If they stop contributing, this project is effectively abandoned.",
+      verdict: "Suitable only if maintained internally",
+      description: "Single maintainer dependency. Avoid for production unless you are prepared to assume full internal maintenance.",
     },
   };
 
@@ -62,7 +62,7 @@ export default function RiskAssessmentCard() {
         borderColor: cfg.border,
       }}
     >
-      <div className="cyber-label" style={{ color: cfg.color }}>◆ RISK ASSESSMENT</div>
+      <div className="cyber-label" style={{ color: cfg.color }}>RISK ASSESSMENT</div>
 
       {/* Icon + verdict */}
       <div className="flex items-center gap-3 mb-3">

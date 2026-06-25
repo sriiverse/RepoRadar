@@ -154,7 +154,7 @@ export default function CommitHeatmap() {
       style={{ background: "rgba(7, 10, 20, 0.95)" }}
     >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-1">
-        <div className="cyber-label">◆ COMMIT ACTIVITY HEATMAP</div>
+        <div className="cyber-label whitespace-nowrap">COMMIT ACTIVITY HEATMAP</div>
         <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs" style={{ fontFamily: "JetBrains Mono, monospace" }}>
           <div>
             <span style={{ color: "var(--cyan)" }}>{totalCommits.toLocaleString()}</span>
@@ -207,16 +207,30 @@ export default function CommitHeatmap() {
         ].map((item, i) => (
           <div
             key={i}
-            title={`${item.label} commits`}
-            style={{
-              width: "12px",
-              height: "12px",
-              borderRadius: "3px",
-              background: item.c,
-              boxShadow: i >= 2 ? `0 0 5px ${item.c}` : `0 0 0 1px rgba(255,255,255,0.08)`,
-              cursor: "default",
-            }}
-          />
+            className="tooltip-container"
+            style={{ display: "inline-block" }}
+          >
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                borderRadius: "3px",
+                background: item.c,
+                boxShadow: i >= 2 ? `0 0 5px ${item.c}` : `0 0 0 1px rgba(255,255,255,0.08)`,
+                cursor: "pointer",
+              }}
+            />
+            <span className="tooltip-text" style={{
+              width: "110px",
+              textAlign: "center",
+              left: "50%",
+              marginLeft: "-55px",
+              bottom: "140%",
+              padding: "6px 8px",
+            }}>
+              {i === 0 ? "0 commits" : `${item.label} commits`}
+            </span>
+          </div>
         ))}
         <span className="text-xs" style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
           High

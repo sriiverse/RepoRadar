@@ -51,10 +51,30 @@ export default function HealthScoreCard() {
   const glowColor = scoreColor + "60";
 
   const breakdown = [
-    { label: "Activity", value: healthScore.breakdown.activityScore, max: 25 },
-    { label: "Maintenance", value: healthScore.breakdown.maintenanceScore, max: 25 },
-    { label: "Community", value: healthScore.breakdown.communityScore, max: 25 },
-    { label: "Stability", value: healthScore.breakdown.stabilityScore, max: 25 },
+    {
+      label: "Activity",
+      value: healthScore.breakdown.activityScore,
+      max: 25,
+      tooltip: "Activity score is calculated from recent commits and release cadence."
+    },
+    {
+      label: "Maintenance",
+      value: healthScore.breakdown.maintenanceScore,
+      max: 25,
+      tooltip: "Maintenance score is calculated from pull request merge speeds and issue response times."
+    },
+    {
+      label: "Community",
+      value: healthScore.breakdown.communityScore,
+      max: 25,
+      tooltip: "Community score is calculated from total contributor count and stargazers."
+    },
+    {
+      label: "Stability",
+      value: healthScore.breakdown.stabilityScore,
+      max: 25,
+      tooltip: "Stability score is calculated from project releases, age, and code distribution risks."
+    },
   ];
 
   return (
@@ -66,7 +86,7 @@ export default function HealthScoreCard() {
         borderColor: `${scoreColor}35`,
       }}
     >
-      <div className="cyber-label self-start mb-2" style={{ color: scoreColor }}>◆ HEALTH SCORE</div>
+      <div className="cyber-label self-start mb-2" style={{ color: scoreColor }}>HEALTH SCORE</div>
 
       {/* Ring gauge */}
       <div className="relative flex items-center justify-center my-2">
@@ -128,21 +148,30 @@ export default function HealthScoreCard() {
           <circle cx="100" cy="100" r={r - 8} fill={`${scoreColor}06`} />
 
           {/* Score number — MASSIVE */}
-          <text x="100" y="92" textAnchor="middle"
-            fill={scoreColor} fontSize="52" fontWeight="900"
+          <text x="100" y="90" textAnchor="middle"
+            fill={scoreColor} fontSize="44" fontWeight="900"
             fontFamily="Inter, sans-serif"
             style={{ filter: `drop-shadow(0 0 12px ${scoreColor})` }}
           >
-            <AnimatedNumber value={score} />
+            <AnimatedNumber value={score} /><tspan fontSize="18" fontWeight="500" fill={`${scoreColor}aa`}>/100</tspan>
           </text>
 
           {/* Label INSIDE the ring */}
-          <text x="100" y="115" textAnchor="middle"
+          <text x="100" y="116" textAnchor="middle"
             fill={`${scoreColor}cc`} fontSize="13" fontWeight="700"
             fontFamily="JetBrains Mono, monospace"
             letterSpacing="3"
           >
             {healthScore.label}
+          </text>
+
+          {/* Sub-label inside the ring */}
+          <text x="100" y="134" textAnchor="middle"
+            fill="var(--text-muted)" fontSize="8" fontWeight="700"
+            fontFamily="JetBrains Mono, monospace"
+            letterSpacing="1"
+          >
+            OVERALL SCORE
           </text>
         </svg>
       </div>
@@ -153,7 +182,12 @@ export default function HealthScoreCard() {
           <div key={item.label}>
             <div className="flex justify-between text-xs mb-0.5"
               style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
-              <span>{item.label}</span>
+              <span className="tooltip-container select-none cursor-help">
+                {item.label} <span style={{ color: "var(--cyan)", opacity: 0.6 }}>?</span>
+                <span className="tooltip-text">
+                  {item.tooltip}
+                </span>
+              </span>
               <span style={{ color: scoreColor }}>{item.value}/{item.max}</span>
             </div>
             <div className="cyber-bar">
