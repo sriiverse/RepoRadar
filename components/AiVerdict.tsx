@@ -90,7 +90,7 @@ export default function AiVerdict({ scanPhase = "idle" }: AiVerdictProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3 }}
                     className={`${
-                      log.startsWith("✓") ? "text-[#00f5ff]" : log.startsWith("⚡") ? "text-[#a855f7]" : "text-white"
+                      log?.startsWith("✓") ? "text-[#00f5ff]" : log?.startsWith("⚡") ? "text-[#a855f7]" : "text-white"
                     }`}
                   >
                     {log}
