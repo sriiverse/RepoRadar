@@ -125,6 +125,33 @@ export default function VerdictPanel() {
   // 6. Dynamic Confidence Score
   const confidence = Math.min(99, 88 + (data.contributors.length > 5 ? 4 : 1) + (releaseCadence.totalReleases > 0 ? 4 : 1) + (recentCommits > 10 ? 3 : 1));
 
+  // 7. Dynamic Next Actions & Health Score simulation
+  let targetScore = score;
+  const nextActions: string[] = [];
+
+  if (busFactor.busFactor < 3 || busFactor.riskLevel === "CRITICAL" || busFactor.riskLevel === "HIGH") {
+    nextActions.push("Improve Bus Factor to ≥3");
+    nextActions.push("Add at least 2 maintainers");
+    const currentBusScore = busFactor.riskLevel === "LOW" ? 10 : busFactor.riskLevel === "MEDIUM" ? 7 : busFactor.riskLevel === "HIGH" ? 3 : 0;
+    targetScore += (10 - currentBusScore) + 5;
+  }
+  if (releaseCadence.totalReleases === 0) {
+    nextActions.push("Publish tagged releases");
+    targetScore += 5;
+  }
+  if ((data.prStats?.total ?? 0) === 0 || (data.issueStats?.total ?? 0) === 0) {
+    nextActions.push("Enable GitHub Issues");
+    targetScore += 10;
+  }
+  if (recentCommits < 10) {
+    nextActions.push("Increase commit velocity");
+    const currentActivityScore = Math.min(25, Math.round((recentCommits / 50) * 25));
+    const targetActivityScore = Math.min(25, Math.round((20 / 50) * 25));
+    targetScore += Math.max(0, targetActivityScore - currentActivityScore);
+  }
+
+  targetScore = Math.min(99, targetScore);
+
   return (
     <div
       id="verdict"
@@ -248,6 +275,54 @@ export default function VerdictPanel() {
             </p>
           </div>
         </div>
+
+        {/* Separator 3: Next Actions */}
+        {nextActions.length > 0 && (
+          <>
+            <div className="h-[1px] my-6" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.06), transparent)" }} />
+            
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* Left/Center: Actions list */}
+              <div className="md:col-span-8 space-y-3">
+                <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1">
+                  NEXT ACTIONS
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                  {nextActions.map((act, i) => (
+                    <div key={i} className="flex items-center gap-2.5 text-xs text-slate-300">
+                      <span className="font-bold text-green-400" style={{ color: "var(--green)" }}>✓</span>
+                      <span>{act}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: Estimated Health Increase */}
+              <div className="md:col-span-4 p-4 rounded-xl flex items-center justify-between" style={{
+                background: "rgba(0,245,255,0.03)",
+                border: "1px solid rgba(0,245,255,0.08)",
+              }}>
+                <div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">
+                    Estimated Health Increase
+                  </div>
+                  <div className="flex items-center gap-3 font-mono">
+                    <span className="text-xl font-bold text-slate-400">{score}</span>
+                    <span className="text-slate-600 text-xs">→</span>
+                    <span className="text-2xl font-black" style={{ color: "var(--green)", textShadow: "0 0 10px rgba(0,255,136,0.4)" }}>
+                      {targetScore}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Visual change indicator */}
+                <div className="text-xs font-bold font-mono" style={{ color: "var(--green)" }}>
+                  +{targetScore - score} pts
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
       </div>
     </div>
