@@ -43,6 +43,30 @@ export default function PRMetricsCards() {
   if (!data) return null;
   const { prStats } = data;
 
+  if (prStats.total === 0) {
+    return (
+      <>
+        <div className="glass-card bounce-card p-4 col-span-1">
+          <div className="cyber-label" style={{ color: "var(--magenta)" }}>
+            ↑ PULL REQUESTS
+          </div>
+          <div className="text-sm font-semibold text-slate-500 font-mono py-2 leading-relaxed">
+            No pull requests<br />yet detected.
+          </div>
+        </div>
+
+        <div className="glass-card bounce-card p-4 col-span-1">
+          <div className="cyber-label" style={{ color: "var(--cyan)" }}>
+            ⏱ PR MERGE TIME
+          </div>
+          <div className="text-sm font-semibold text-slate-500 font-mono py-2 leading-relaxed">
+            No merge history<br />available.
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <MetricCard

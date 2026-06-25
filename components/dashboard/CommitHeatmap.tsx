@@ -165,10 +165,10 @@ export default function CommitHeatmap() {
             <span style={{ color: "var(--text-muted)" }}> Active Days</span>
           </div>
           <div>
-            <span style={{ color: "#00f5ff" }}>Peak: {peakCommits}/day</span>
+            <span style={{ color: "#00f5ff" }}>Peak Day: {peakCommits} commits</span>
           </div>
           <div>
-            <span style={{ color: "#a855f7" }}>Current: {activeCurrentStreak}d</span>
+            <span style={{ color: "#a855f7" }}>Current: {activeCurrentStreak > 0 ? `${activeCurrentStreak}d` : "—"}</span>
             <span className="text-slate-700 px-1.5">|</span>
             <span style={{ color: "#a855f7" }}>Longest: {longestStreak}d</span>
           </div>
@@ -196,7 +196,7 @@ export default function CommitHeatmap() {
       {/* Legend */}
       <div className="flex items-center gap-2 mt-3 justify-end">
         <span className="text-xs" style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
-          Less
+          Daily commits: Low
         </span>
         {[
           { c: "#0f1729", label: scale.labels[0] },
@@ -219,7 +219,7 @@ export default function CommitHeatmap() {
           />
         ))}
         <span className="text-xs" style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
-          More
+          High
         </span>
       </div>
     </div>

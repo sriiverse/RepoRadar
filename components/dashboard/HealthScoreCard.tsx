@@ -22,13 +22,22 @@ function AnimatedNumber({ value }: { value: number }) {
 
 export default function HealthScoreCard() {
   const { data } = useRepoStore();
-  if (!data) return null;
-  const { healthScore } = data;
-  const score = healthScore.total;
+  const score = data?.healthScore.total ?? 0;
 
   const r = 72;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
+
+  const [dashOffset, setDashOffset] = useState(circumference);
+
+  useEffect(() => {
+    // Trigger transition from empty to target percentage after mount
+    setDashOffset(offset);
+  }, [offset]);
+
+  if (!data) return null;
+  const { healthScore } = data;
+
   // Spinning decoration ring — slightly larger
   const rDeco = 82;
   const circumDeco = 2 * Math.PI * rDeco;
@@ -107,7 +116,7 @@ export default function HealthScoreCard() {
             strokeWidth="12"
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={offset}
+            strokeDashoffset={dashOffset}
             transform="rotate(-90 100 100)"
             filter="url(#glow-filter)"
             style={{

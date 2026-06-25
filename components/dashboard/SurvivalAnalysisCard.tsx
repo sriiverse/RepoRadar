@@ -169,6 +169,9 @@ export default function SurvivalAnalysisCard() {
           </div>
         </div>
         <AnimatedBar targetPct={collapsePct} color={cfg.color} />
+        <div className="mt-3 text-[11px] leading-relaxed text-slate-500 font-mono text-center">
+          Estimated repository continuity if the primary maintainer becomes inactive.
+        </div>
       </div>
 
       {/* Warning label */}

@@ -5,25 +5,37 @@ import { useRepoStore } from "@/store/repoStore";
 export default function RiskInsights() {
   const { data } = useRepoStore();
   if (!data) return null;
-  const { busFactor, issueStats, commitActivity } = data;
+  const { busFactor, commitActivity, releases } = data;
 
   const insights: Array<{ type: "warning" | "danger" | "ok"; text: string; sub: string }> = [];
 
-  // High contributor concentration
-  if (busFactor.topContributorPercentage > 40) {
+  // Bus factor health / threshold check
+  if (busFactor.busFactor < 3) {
     insights.push({
-      type: "warning",
-      text: "High contributor concentration",
-      sub: `Top 1 contributor owns ${busFactor.topContributorPercentage}% of commits.`,
+      type: "danger",
+      text: "Bus Factor below recommended threshold",
+      sub: `A minimum Bus Factor of 3 is recommended for stable production systems. Currently: ${busFactor.busFactor}.`,
+    });
+  } else {
+    insights.push({
+      type: "ok",
+      text: "Distributed team bus factor",
+      sub: `${busFactor.busFactor} core contributors own the critical knowledge base.`,
     });
   }
 
-  // Stale issues
-  if (issueStats.stale > 5) {
+  // Contributor concentration percentage
+  if (busFactor.topContributorPercentage > 40) {
     insights.push({
       type: "warning",
-      text: `${issueStats.stale} stale issues detected`,
-      sub: "Issues with no activity for more than 90 days.",
+      text: `${busFactor.topContributorPercentage}% of knowledge owned by one contributor`,
+      sub: `High dependency on contributor "${data.contributors[0]?.login ?? "top developer"}" for development continuity.`,
+    });
+  } else {
+    insights.push({
+      type: "ok",
+      text: "Healthy contribution diversity",
+      sub: `No single contributor owns more than 40% of the codebase history.`,
     });
   }
 
@@ -33,23 +45,36 @@ export default function RiskInsights() {
   if (recentCommits > 10) {
     insights.push({
       type: "ok",
-      text: "Active development",
-      sub: `${recentCommits} commits in the last 4 weeks.`,
+      text: "Repository maintained recently",
+      sub: `${recentCommits} commits logged over the past 30 days.`,
+    });
+  } else if (recentCommits > 0) {
+    insights.push({
+      type: "warning",
+      text: "Slowed development velocity",
+      sub: `Only ${recentCommits} commits in the last 4 weeks.`,
     });
   } else {
     insights.push({
       type: "danger",
-      text: "Low recent activity",
-      sub: `Only ${recentCommits} commits in the last 4 weeks.`,
+      text: "No recent maintenance activity",
+      sub: "Zero commits detected in the last 30 days.",
     });
   }
 
-  // Bus factor health
-  if (busFactor.riskLevel === "LOW") {
+  // Release cadence check
+  const releaseCount = releases?.length ?? 0;
+  if (releaseCount === 0) {
+    insights.push({
+      type: "warning",
+      text: "No releases detected",
+      sub: "Repository does not publish tags or release binaries via GitHub.",
+    });
+  } else {
     insights.push({
       type: "ok",
-      text: "Healthy bus factor",
-      sub: `${busFactor.busFactor} contributors needed to reach 50% codebase.`,
+      text: "Release cadence is active",
+      sub: `Found ${releaseCount} active release tag(s) published.`,
     });
   }
 
