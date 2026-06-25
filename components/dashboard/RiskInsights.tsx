@@ -85,10 +85,10 @@ export default function RiskInsights() {
   };
 
   return (
-    <div className="glass-card bounce-card p-5 flex-1">
-      <div className="cyber-label">◆ RISK INSIGHTS</div>
+    <div className="glass-card bounce-card p-5 flex-1 flex flex-col min-h-0">
+      <div className="cyber-label mb-3">RISK INSIGHTS</div>
 
-      <div className="space-y-3">
+      <div className="flex-grow overflow-y-auto pr-2 space-y-3" style={{ maxHeight: "135px" }}>
         {insights.map((insight, i) => {
           const cfg = iconMap[insight.type];
           return (
@@ -103,7 +103,7 @@ export default function RiskInsights() {
                 <div className="text-xs font-semibold" style={{ color: cfg.color }}>
                   {insight.text}
                 </div>
-                <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                <div className="text-[11px]" style={{ color: "var(--text-muted)", lineHeight: "1.4" }}>
                   {insight.sub}
                 </div>
               </div>
