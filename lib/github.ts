@@ -85,14 +85,69 @@ export async function fetchRepoMeta(owner: string, repo: string): Promise<RepoMe
 
 export async function fetchCommitActivity(owner: string, repo: string): Promise<CommitActivity[]> {
   try {
-    const { data } = await octokit.rest.repos.getCommitActivityStats({ owner, repo });
-    // GitHub may return 202 (stats computing), retry once
-    if (!data || !Array.isArray(data)) return [];
-    return data.map((w) => ({
-      week: w.week,
-      days: w.days,
-      total: w.total,
-    }));
+    const commits = [];
+    let page = 1;
+    const perPage = 100;
+    const maxPages = 10;
+    const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+
+    while (page <= maxPages) {
+      const response = await octokit.rest.repos.listCommits({
+        owner,
+        repo,
+        since,
+        per_page: perPage,
+        page,
+      });
+
+      if (!response.data || response.data.length === 0) {
+        break;
+      }
+
+      commits.push(...response.data);
+
+      if (response.data.length < perPage) {
+        break;
+      }
+      page++;
+    }
+
+    // Start from 52 Sundays ago
+    const now = new Date();
+    const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDate = new Date(endDate.getTime() - 52 * 7 * 86400 * 1000);
+    const startDay = startDate.getDay();
+    // If not Sunday, adjust to the previous Sunday
+    startDate.setDate(startDate.getDate() - startDay);
+
+    const startUnix = Math.floor(startDate.getTime() / 1000);
+    const weeks: CommitActivity[] = [];
+    for (let w = 0; w < 53; w++) {
+      weeks.push({
+        week: startUnix + w * 7 * 86400,
+        days: [0, 0, 0, 0, 0, 0, 0],
+        total: 0,
+      });
+    }
+
+    for (const commit of commits) {
+      const dateStr = commit.commit.author?.date ?? commit.commit.committer?.date;
+      if (!dateStr) continue;
+      const date = new Date(dateStr);
+      const dateUnix = Math.floor(date.getTime() / 1000);
+
+      const secondsFromStart = dateUnix - startUnix;
+      if (secondsFromStart < 0) continue;
+
+      const weekIndex = Math.floor(secondsFromStart / (7 * 86400));
+      if (weekIndex >= 0 && weekIndex < weeks.length) {
+        const dayIndex = date.getDay(); // 0=Sunday .. 6=Saturday
+        weeks[weekIndex].days[dayIndex]++;
+        weeks[weekIndex].total++;
+      }
+    }
+
+    return weeks;
   } catch {
     return [];
   }

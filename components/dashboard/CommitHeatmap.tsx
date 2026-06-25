@@ -59,25 +59,88 @@ export default function CommitHeatmap() {
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - 1);
 
+  // Dynamic scaling parameters
+  const peakCommits = values.reduce((max, v) => Math.max(max, v.count), 0);
+
+  const getScaleBrackets = (max: number) => {
+    if (max <= 4) {
+      return {
+        s1: 1,
+        s2: 2,
+        s3: 3,
+        s4: 4,
+        labels: ["0", "1", "2", "3", "4+"]
+      };
+    }
+    const step = max / 4;
+    const s1 = Math.max(1, Math.round(step));
+    const s2 = Math.max(s1 + 1, Math.round(step * 2));
+    const s3 = Math.max(s2 + 1, Math.round(step * 3));
+    const s4 = max;
+
+    return {
+      s1,
+      s2,
+      s3,
+      s4,
+      labels: [
+        "0",
+        `1-${s1}`,
+        `${s1 + 1}-${s2}`,
+        `${s2 + 1}-${s3}`,
+        `${s3 + 1}+`
+      ]
+    };
+  };
+
+  const scale = getScaleBrackets(peakCommits);
+
   const getClassForValue = (value: { count: number } | null) => {
     if (!value || value.count === 0) return "color-empty";
-    if (value.count < 3) return "color-scale-1";
-    if (value.count < 7) return "color-scale-2";
-    if (value.count < 15) return "color-scale-3";
+    if (value.count <= scale.s1) return "color-scale-1";
+    if (value.count <= scale.s2) return "color-scale-2";
+    if (value.count <= scale.s3) return "color-scale-3";
     return "color-scale-4";
   };
 
   const totalCommits = values.reduce((s, v) => s + v.count, 0);
   const activeDays = values.filter((v) => v.count > 0).length;
 
+  // Streaks calculation
+  const sortedValues = [...values].sort((a, b) => a.date.localeCompare(b.date));
+  let longestStreak = 0;
+  let currentStreakVal = 0;
+  for (const val of sortedValues) {
+    if (val.count > 0) {
+      currentStreakVal++;
+      if (currentStreakVal > longestStreak) {
+        longestStreak = currentStreakVal;
+      }
+    } else {
+      currentStreakVal = 0;
+    }
+  }
+
+  let activeCurrentStreak = 0;
+  for (let i = sortedValues.length - 1; i >= 0; i--) {
+    if (sortedValues[i].count > 0) {
+      activeCurrentStreak++;
+    } else {
+      if (i === sortedValues.length - 1 && sortedValues[i].count === 0) {
+        continue;
+      }
+      break;
+    }
+  }
+
   return (
     <div
       className="glass-card bounce-card p-5 h-full"
       style={{ background: "rgba(7, 10, 20, 0.95)" }}
     >
-      <div className="flex justify-between items-start mb-1">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-1">
         <div className="cyber-label">◆ COMMIT ACTIVITY HEATMAP</div>
-        <div className="flex gap-4 text-xs" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ fontFamily: "JetBrains Mono, monospace" }}>
           <div>
             <span style={{ color: "var(--cyan)" }}>{totalCommits.toLocaleString()}</span>
             <span style={{ color: "var(--text-muted)" }}> commits</span>
@@ -86,10 +149,18 @@ export default function CommitHeatmap() {
             <span style={{ color: "#ff00ff" }}>{activeDays}</span>
             <span style={{ color: "var(--text-muted)" }}> active days</span>
           </div>
+          <div>
+            <span style={{ color: "#00f5ff" }}>{peakCommits}</span>
+            <span style={{ color: "var(--text-muted)" }}> peak/day</span>
+          </div>
+          <div>
+            <span style={{ color: "#a855f7" }}>{activeCurrentStreak}d</span>
+            <span style={{ color: "var(--text-muted)" }}> streak <span className="opacity-50 text-[10px]">(max {longestStreak}d)</span></span>
+          </div>
         </div>
       </div>
       <div className="text-xs mb-4" style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
-        52-week contribution history
+        Repository commit history
       </div>
 
       <div style={{ fontSize: "11px" }}>
@@ -113,11 +184,11 @@ export default function CommitHeatmap() {
           Less
         </span>
         {[
-          { c: "#0f1729", label: "0" },
-          { c: "#0d2845", label: "1-2" },
-          { c: "#00a8cc", label: "3-6" },
-          { c: "#00f5ff", label: "7-14" },
-          { c: "#ff00ff", label: "15+" },
+          { c: "#0f1729", label: scale.labels[0] },
+          { c: "#0d2845", label: scale.labels[1] },
+          { c: "#00a8cc", label: scale.labels[2] },
+          { c: "#00f5ff", label: scale.labels[3] },
+          { c: "#ff00ff", label: scale.labels[4] },
         ].map((item, i) => (
           <div
             key={i}
