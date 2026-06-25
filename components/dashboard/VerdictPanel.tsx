@@ -2,6 +2,14 @@
 
 import { useRepoStore } from "@/store/repoStore";
 
+interface ProblemDetail {
+  id: string;
+  severity: "critical" | "high" | "medium" | "low";
+  label: string;
+  actions: string[];
+  estimated_health_gain: number;
+}
+
 export default function VerdictPanel() {
   const { data } = useRepoStore();
 
@@ -31,30 +39,263 @@ export default function VerdictPanel() {
 
   const cfg = riskConfig[busFactor.riskLevel];
 
-  // 2. Synthesize detailed, realistic summary based on codebase metrics
-  const getVerdictSummary = () => {
-    const activityText = recentCommits >= 15
-      ? "shows active recent development and frequent updates"
-      : recentCommits > 0
-      ? "shows moderate development activity in recent weeks"
-      : "shows stalled development activity with no recent commits";
+  // 2. Rule-Based Problem Detection Engine
+  const getDetectedProblems = (): ProblemDetail[] => {
+    const list: ProblemDetail[] = [];
 
-    const concentrationText = busFactor.busFactor === 1
-      ? `but exhibits a critical key-person risk with a Bus Factor of 1 (${busFactor.topContributorPercentage}% of commits owned by the top contributor)`
-      : `and displays healthy contributor diversity with a Bus Factor of ${busFactor.busFactor}`;
+    // Bus Factor Checks
+    if (busFactor.busFactor === 1) {
+      list.push({
+        id: "LOW_BUS_FACTOR",
+        severity: "critical",
+        label: "Bus Factor = 1 (Critical dependency)",
+        actions: [
+          "Invite additional maintainers.",
+          "Document critical operational knowledge.",
+          "Reduce dependency on a single contributor."
+        ],
+        estimated_health_gain: 15,
+      });
+    } else if (busFactor.busFactor < 3) {
+      list.push({
+        id: "LOW_BUS_FACTOR_WARNING",
+        severity: "high",
+        label: `Low Bus Factor (Currently: ${busFactor.busFactor})`,
+        actions: [
+          "Cross-train contributors on key modules.",
+          "Establish shared repository access."
+        ],
+        estimated_health_gain: 8,
+      });
+    }
 
-    const releaseText = releaseCadence.totalReleases === 0
-      ? "The absence of release tags reduces confidence for production version control."
-      : `The presence of structured releases (latest: ${releaseCadence.lastReleaseAgo}) shows good versioning stability.`;
+    // Contributor Concentration
+    if (busFactor.topContributorPercentage > 75) {
+      list.push({
+        id: "SINGLE_MAINTAINER",
+        severity: "critical",
+        label: "Single maintainer dependency",
+        actions: [
+          "Add co-maintainers to review code.",
+          "Distribute master branch merge permissions."
+        ],
+        estimated_health_gain: 10,
+      });
+    } else if (busFactor.topContributorPercentage > 50) {
+      list.push({
+        id: "HIGH_CONCENTRATION",
+        severity: "high",
+        label: "High contributor concentration",
+        actions: [
+          "Encourage secondary authors to contribute.",
+          "Delegate sub-module write rights."
+        ],
+        estimated_health_gain: 6,
+      });
+    }
 
-    const prText = (data.prStats?.open ?? 0) > 0
-      ? "Ongoing pull request workflow is active."
-      : "Low pull request activity suggests a closed or inactive workflow.";
+    // Releases Check
+    if (releaseCadence.totalReleases === 0) {
+      list.push({
+        id: "NO_RELEASES",
+        severity: "high",
+        label: "No releases detected",
+        actions: [
+          "Publish semantic versioned releases.",
+          "Use GitHub Releases for changelogs."
+        ],
+        estimated_health_gain: 10,
+      });
+    }
 
-    return `This repository ${activityText}, ${concentrationText}. ${releaseText} ${prText}`;
+    // Activity velocity Checks
+    if (recentCommits === 0) {
+      list.push({
+        id: "NO_ACTIVITY",
+        severity: "high",
+        label: "Stalled development (no commits in 30d)",
+        actions: [
+          "Resume regular commit cycles.",
+          "Audit open issues for quick fixes."
+        ],
+        estimated_health_gain: 12,
+      });
+    } else if (recentCommits < 5) {
+      list.push({
+        id: "LOW_ACTIVITY",
+        severity: "medium",
+        label: "Slowed development velocity",
+        actions: [
+          "Review stale branches and pull requests.",
+          "Set project milestones."
+        ],
+        estimated_health_gain: 6,
+      });
+    }
+
+    // Pull request lifecycle
+    if ((data.prStats?.total ?? 0) === 0) {
+      list.push({
+        id: "NO_PRS",
+        severity: "medium",
+        label: "No pull request workflow history",
+        actions: [
+          "Adopt a pull-request based workflow.",
+          "Setup branch protection guidelines."
+        ],
+        estimated_health_gain: 7,
+      });
+    }
+
+    // Issue lifecycle
+    if ((data.issueStats?.total ?? 0) === 0) {
+      list.push({
+        id: "NO_ISSUES",
+        severity: "medium",
+        label: "Low community engagement (Issues disabled)",
+        actions: [
+          "Enable GitHub Issues.",
+          "Encourage community bug reports."
+        ],
+        estimated_health_gain: 6,
+      });
+    }
+
+    // License Check
+    if (!data.meta.license || data.meta.license === "None" || data.meta.license === "Unknown") {
+      list.push({
+        id: "NO_LICENSE",
+        severity: "medium",
+        label: "Missing open-source license",
+        actions: [
+          "Add an open-source LICENSE file (e.g. MIT, Apache 2.0)."
+        ],
+        estimated_health_gain: 5,
+      });
+    }
+
+    // Stargazers / documentation health
+    if (healthScore.breakdown.communityScore < 10) {
+      list.push({
+        id: "LOW_DOCUMENTATION",
+        severity: "low",
+        label: "Minimal project documentation",
+        actions: [
+          "Create a detailed README file.",
+          "Add contribution guidelines (CONTRIBUTING.md)."
+        ],
+        estimated_health_gain: 5,
+      });
+    }
+
+    // Framework specific suggestions
+    const languages = data.languageBreakdown ?? [];
+    const isTS = languages.some((l: { name: string }) => l.name === "TypeScript" || l.name === "JavaScript");
+    const isPython = languages.some((l: { name: string }) => l.name === "Python");
+    const isDocker = languages.some((l: { name: string }) => l.name === "Dockerfile" || l.name === "Docker");
+
+    if (isTS) {
+      list.push({
+        id: "TECH_TS",
+        severity: "low",
+        label: "TypeScript/JavaScript environment configuration",
+        actions: [
+          "Enable Dependabot for secure npm audit scans.",
+          "Add ESLint + Prettier validation checks in CI."
+        ],
+        estimated_health_gain: 3,
+      });
+    }
+    if (isPython) {
+      list.push({
+        id: "TECH_PYTHON",
+        severity: "low",
+        label: "Python environment configuration",
+        actions: [
+          "Configure Ruff/Flake8 style checking.",
+          "Add automated pytest runner in GitHub Actions."
+        ],
+        estimated_health_gain: 3,
+      });
+    }
+    if (isDocker) {
+      list.push({
+        id: "TECH_DOCKER",
+        severity: "low",
+        label: "Docker containerization environment",
+        actions: [
+          "Optimize multi-stage Docker build layers.",
+          "Scan container images with Trivy in CI."
+        ],
+        estimated_health_gain: 3,
+      });
+    }
+
+    return list;
   };
 
-  // 3. Dynamic Strengths Checklist
+  const detectedProblems = getDetectedProblems();
+
+  // 3. Sort Problems by Severity
+  const severityRank = { critical: 4, high: 3, medium: 2, low: 1 };
+  const sortedProblems = [...detectedProblems].sort((a, b) => severityRank[b.severity] - severityRank[a.severity]);
+
+  // Extract Top 5 unique recommendations
+  const nextActions: string[] = [];
+  let calculatedGain = 0;
+
+  for (const prob of sortedProblems) {
+    if (nextActions.length >= 5) break;
+    for (const act of prob.actions) {
+      if (nextActions.length < 5 && !nextActions.includes(act)) {
+        nextActions.push(act);
+      }
+    }
+    calculatedGain += prob.estimated_health_gain;
+  }
+
+  // Fallback for ideal projects
+  if (nextActions.length === 0) {
+    nextActions.push("Continue current release cadence.");
+    nextActions.push("Maintain contributor onboarding guidelines.");
+    nextActions.push("Monitor dependency security updates monthly.");
+  }
+
+  const targetScore = Math.min(99, score + calculatedGain);
+
+  // 4. Skimmable Summary Block Generator
+  const getVerdictSummaryParagraphs = () => {
+    const paragraphs = [];
+
+    // Paragraph 1: Activity
+    if (recentCommits >= 15) {
+      paragraphs.push(`Development activity is robust and active, with ${recentCommits} commits detected over the last 30 days.`);
+    } else if (recentCommits > 0) {
+      paragraphs.push(`Development activity shows moderate velocity, with ${recentCommits} commits detected recently.`);
+    } else {
+      paragraphs.push("Development activity appears stalled, with no recent commits detected over the past month.");
+    }
+
+    // Paragraph 2: Bus factor & Concentration
+    if (busFactor.busFactor === 1) {
+      paragraphs.push(`The project exhibits a critical key-person dependency (Bus Factor = 1), meaning that codebase knowledge is concentrated in a single contributor (${busFactor.topContributorPercentage}% ownership).`);
+    } else if (busFactor.busFactor <= 2) {
+      paragraphs.push(`The codebase shows a highly concentrated contributor hierarchy (Bus Factor = ${busFactor.busFactor}), which increases operational risks if core developers become inactive.`);
+    } else {
+      paragraphs.push(`The project is backed by a resilient contributor team with a Bus Factor of ${busFactor.busFactor}, distributing technical knowledge safely.`);
+    }
+
+    // Paragraph 3: Releases & PR lifecycle
+    if (releaseCadence.totalReleases === 0) {
+      paragraphs.push("The complete absence of tagged releases and structured pull request versions reduces operational confidence for mission-critical production adoption.");
+    } else {
+      paragraphs.push(`The presence of structured version tags (${releaseCadence.totalReleases} releases) and pull request merge procedures supports stable package management.`);
+    }
+
+    return paragraphs;
+  };
+
+  // 4.5 Dynamic Strengths Checklist
   const strengths: string[] = [];
   if (recentCommits >= 15) {
     strengths.push("Good commit history");
@@ -76,81 +317,140 @@ export default function VerdictPanel() {
   if (healthScore.breakdown.maintenanceScore >= 18) {
     strengths.push("Healthy documentation and responsive PRs");
   }
-  // Fallbacks if empty
   if (strengths.length < 2) {
     strengths.push("Publicly accessible repository");
     strengths.push("Standard open-source layout");
   }
 
-  // 4. Dynamic Risks Checklist
-  const risks: string[] = [];
-  if (busFactor.busFactor === 1) {
-    risks.push("Bus Factor = 1");
-  }
-  if (busFactor.topContributorPercentage >= 75) {
-    risks.push("Single maintainer dependency");
-  } else if (busFactor.topContributorPercentage >= 50) {
-    risks.push("High contributor concentration");
-  }
-  if (recentCommits === 0) {
-    risks.push("Stalled development activity");
-  }
-  if (releaseCadence.totalReleases === 0) {
-    risks.push("No releases");
-  }
-  if ((data.prStats?.total ?? 0) === 0 && (data.issueStats?.total ?? 0) === 0) {
-    risks.push("Low community engagement");
-  }
-  if (healthScore.total < 45) {
-    risks.push("Low overall repository health");
-  }
-  if (risks.length === 0) {
-    risks.push("No major vulnerabilities detected");
+  // 5. Dynamic Recommended Environment Mappings
+  let recommendedUses = ["Learning & Exploration", "Personal Projects", "Internal Tooling"];
+  let notRecommendedUses = ["Production Environments", "Mission-Critical Systems"];
+
+  if (busFactor.riskLevel === "LOW") {
+    recommendedUses = ["Mission-Critical Production", "Enterprise Applications", "High-Availability Systems"];
+    notRecommendedUses = ["No major environment exclusions detected"];
+  } else if (busFactor.riskLevel === "MEDIUM") {
+    recommendedUses = ["Standard Production Use", "Internal Operations", "General Deployments"];
+    notRecommendedUses = ["Ultra High-Reliability Systems (without internal audits)"];
+  } else if (busFactor.riskLevel === "HIGH") {
+    recommendedUses = ["Pre-production Testing", "Developer Sandboxes", "Secondary Tooling"];
+    notRecommendedUses = ["Core Production Dependency", "Mission-Critical Systems"];
   }
 
-  // 5. Dynamic Recommendation
-  const getRecommendationText = () => {
-    if (busFactor.riskLevel === "CRITICAL") {
-      return "Suitable for learning,\ninternal tooling,\nor personal projects.\n\nProduction usage should include\nan internal maintenance plan.";
+  // 6. Dynamic Narrative Repository Timeline Generator
+  const getTimelineEvents = () => {
+    const events: Array<{ dateStr: string; label: string; icon: string; bar?: string }> = [];
+
+    // Created event
+    const createdDate = new Date(data.meta.createdAt);
+    const createdMonthStr = createdDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    events.push({
+      dateStr: createdMonthStr,
+      label: "Repository Created",
+      icon: "✓",
+    });
+
+    // Group commits by month
+    const monthlyCommits: { [key: string]: { total: number; weeks: Array<{ week: number; days: number[]; total: number }> } } = {};
+    for (const week of commitActivity) {
+      const date = new Date(week.week * 1000);
+      const monthKey = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      if (!monthlyCommits[monthKey]) {
+        monthlyCommits[monthKey] = { total: 0, weeks: [] };
+      }
+      monthlyCommits[monthKey].total += week.total;
+      monthlyCommits[monthKey].weeks.push(week);
     }
-    if (busFactor.riskLevel === "HIGH") {
-      return "Recommended for pre-production\nor auxiliary tools.\n\nEstablish internal codebase ownership\nbefore mission-critical adoption.";
+
+    const monthKeys = Object.keys(monthlyCommits).sort((a, b) => {
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+
+    // Find peak activity month
+    let peakMonth = "";
+    let peakCount = 0;
+    for (const mKey of monthKeys) {
+      if (monthlyCommits[mKey].total > peakCount) {
+        peakCount = monthlyCommits[mKey].total;
+        peakMonth = mKey;
+      }
     }
-    if (busFactor.riskLevel === "MEDIUM") {
-      return "Suitable for production use\nwith periodic reviews.\n\nMonitor maintainer status and\ndocument internal backup strategies.";
+
+    if (peakMonth && peakMonth !== createdMonthStr && peakCount > 0) {
+      const barLength = Math.min(10, Math.max(2, Math.round((peakCount / 150) * 10)));
+      events.push({
+        dateStr: peakMonth,
+        label: "Peak Activity Month",
+        icon: "⚡",
+        bar: "█".repeat(barLength) + "░".repeat(10 - barLength),
+      });
     }
-    return "Fully recommended for\nmission-critical production.\n\nStrong contributor base,\nsolid activity, and stable version history.";
+
+    // Release Milestone Check (midway point)
+    const midIndex = Math.floor(monthKeys.length / 2);
+    const midMonth = monthKeys[midIndex];
+    if (midMonth && midMonth !== createdMonthStr && midMonth !== peakMonth) {
+      if (releaseCadence.totalReleases === 0) {
+        events.push({
+          dateStr: midMonth,
+          label: "Releases Pending",
+          icon: "⚠",
+        });
+      } else {
+        events.push({
+          dateStr: midMonth,
+          label: `Active Releases Published`,
+          icon: "✓",
+        });
+      }
+    }
+
+    // Contributor concentration shift
+    const recentMonthKey = monthKeys[monthKeys.length - 2];
+    if (recentMonthKey && recentMonthKey !== createdMonthStr && recentMonthKey !== peakMonth && recentMonthKey !== midMonth) {
+      if (busFactor.topContributorPercentage > 75) {
+        events.push({
+          dateStr: recentMonthKey,
+          label: "Single Developer Dominance",
+          icon: "⚠⚠",
+        });
+      } else {
+        events.push({
+          dateStr: recentMonthKey,
+          label: "Contributor Diversity Stable",
+          icon: "✓",
+        });
+      }
+    }
+
+    // Current State
+    events.push({
+      dateStr: "Current",
+      label: busFactor.riskLevel === "CRITICAL"
+        ? "Critical Maintainer Risk"
+        : busFactor.riskLevel === "HIGH"
+        ? "High Contributor Concentration"
+        : busFactor.riskLevel === "MEDIUM"
+        ? "Moderate Maintenance Exposure"
+        : "Healthy Repository Autonomy",
+      icon: busFactor.riskLevel === "CRITICAL" || busFactor.riskLevel === "HIGH" ? "🔴" : busFactor.riskLevel === "MEDIUM" ? "🟠" : "🟢",
+    });
+
+    // Dedup events by dateStr to prevent layout conflicts
+    const seen = new Set();
+    const uniqueEvents = [];
+    for (const ev of events) {
+      if (!seen.has(ev.dateStr)) {
+        seen.add(ev.dateStr);
+        uniqueEvents.push(ev);
+      }
+    }
+
+    return uniqueEvents.slice(0, 5);
   };
 
-  // 6. Dynamic Confidence Score
+  const timelineEvents = getTimelineEvents();
   const confidence = Math.min(99, 88 + (data.contributors.length > 5 ? 4 : 1) + (releaseCadence.totalReleases > 0 ? 4 : 1) + (recentCommits > 10 ? 3 : 1));
-
-  // 7. Dynamic Next Actions & Health Score simulation
-  let targetScore = score;
-  const nextActions: string[] = [];
-
-  if (busFactor.busFactor < 3 || busFactor.riskLevel === "CRITICAL" || busFactor.riskLevel === "HIGH") {
-    nextActions.push("Improve Bus Factor to ≥3");
-    nextActions.push("Add at least 2 maintainers");
-    const currentBusScore = busFactor.riskLevel === "LOW" ? 10 : busFactor.riskLevel === "MEDIUM" ? 7 : busFactor.riskLevel === "HIGH" ? 3 : 0;
-    targetScore += (10 - currentBusScore) + 5;
-  }
-  if (releaseCadence.totalReleases === 0) {
-    nextActions.push("Publish tagged releases");
-    targetScore += 5;
-  }
-  if ((data.prStats?.total ?? 0) === 0 || (data.issueStats?.total ?? 0) === 0) {
-    nextActions.push("Enable GitHub Issues");
-    targetScore += 10;
-  }
-  if (recentCommits < 10) {
-    nextActions.push("Increase commit velocity");
-    const currentActivityScore = Math.min(25, Math.round((recentCommits / 50) * 25));
-    const targetActivityScore = Math.min(25, Math.round((20 / 50) * 25));
-    targetScore += Math.max(0, targetActivityScore - currentActivityScore);
-  }
-
-  targetScore = Math.min(99, targetScore);
 
   return (
     <div
@@ -176,7 +476,7 @@ export default function VerdictPanel() {
           <div className="flex items-center gap-4">
             <span className="text-3xl animate-pulse">🤖</span>
             <div>
-              <h2 className="text-2xl font-black tracking-tight" style={{
+              <h2 className="text-2xl font-black tracking-tight animate-pulse-glow" style={{
                 color: cfg.color,
                 textShadow: `0 0 20px ${cfg.color}40`,
                 fontFamily: "JetBrains Mono, monospace",
@@ -189,7 +489,7 @@ export default function VerdictPanel() {
             </div>
           </div>
 
-          {/* Metrics block */}
+          {/* Meters block */}
           <div className="flex flex-wrap items-center gap-8">
             <div className="text-right">
               <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">
@@ -220,14 +520,16 @@ export default function VerdictPanel() {
         {/* Separator 1 */}
         <div className="h-[1px] mb-6" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.06), transparent)" }} />
 
-        {/* Summary Block */}
+        {/* Summary Block (3 paragraphs layout) */}
         <div className="mb-6">
           <div className="text-[10px] tracking-widest text-slate-500 uppercase mb-2">
             Summary
           </div>
-          <p className="text-slate-300 leading-relaxed text-sm md:text-base" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-            {getVerdictSummary()}
-          </p>
+          <div className="text-slate-300 leading-relaxed text-sm md:text-base space-y-3" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+            {getVerdictSummaryParagraphs().map((para, idx) => (
+              <p key={idx}>{para}</p>
+            ))}
+          </div>
         </div>
 
         {/* Separator 2 */}
@@ -235,7 +537,7 @@ export default function VerdictPanel() {
 
         {/* 3-Column Content Block */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Strengths */}
+          {/* Column 1: Strengths */}
           <div className="space-y-3">
             <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1 flex items-center gap-1.5">
               <span style={{ color: "var(--green)" }}>✓</span> Strengths
@@ -250,29 +552,98 @@ export default function VerdictPanel() {
             </div>
           </div>
 
-          {/* Risks */}
+          {/* Column 2: Risks (Sorted by Severity) */}
           <div className="space-y-3">
             <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1 flex items-center gap-1.5">
               <span style={{ color: cfg.color }}>⚠</span> Risks
             </div>
             <div className="space-y-2">
-              {risks.map((item, i) => (
-                <div key={i} className="flex items-start gap-2.5 text-xs text-slate-300 leading-relaxed">
-                  <span className="font-bold" style={{ color: cfg.color }}>⚠</span>
-                  <span>{item}</span>
-                </div>
-              ))}
+              {sortedProblems.map((prob, i) => {
+                const icon = prob.severity === "critical" ? "🔴" : prob.severity === "high" ? "🟠" : "🟡";
+                return (
+                  <div key={i} className="flex items-start gap-2.5 text-xs text-slate-300 leading-relaxed">
+                    <span className="font-bold">{icon}</span>
+                    <span>{prob.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Recommendation */}
-          <div className="space-y-3">
+          {/* Column 3: Recommendation (Visually Split) */}
+          <div className="space-y-4">
             <div className="text-xs tracking-widest text-slate-400 font-bold uppercase mb-1">
               Recommendation
             </div>
-            <p className="text-xs leading-relaxed text-slate-300" style={{ whiteSpace: "pre-line" }}>
-              {getRecommendationText()}
-            </p>
+            
+            {/* Recommended block */}
+            <div className="space-y-1.5 p-3 rounded-lg" style={{ background: "rgba(0,255,136,0.02)", border: "1px solid rgba(0,255,136,0.08)" }}>
+              <div className="text-xs font-bold text-green-400 flex items-center gap-1.5 mb-1">
+                <span>✓</span> Recommended For
+              </div>
+              <ul className="text-[11px] space-y-1 text-slate-300 pl-4 list-disc">
+                {recommendedUses.map((use, i) => (
+                  <li key={i}>{use}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Not Recommended block */}
+            <div className="space-y-1.5 p-3 rounded-lg" style={{ background: "rgba(255,68,68,0.02)", border: "1px solid rgba(255,68,68,0.08)" }}>
+              <div className="text-xs font-bold text-red-400 flex items-center gap-1.5 mb-1">
+                <span>✕</span> Not Recommended
+              </div>
+              <ul className="text-[11px] space-y-1 text-slate-300 pl-4 list-disc">
+                {notRecommendedUses.map((use, i) => (
+                  <li key={i}>{use}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Separator: Repository Timeline */}
+        <div className="h-[1px] my-6" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.06), transparent)" }} />
+        
+        <div className="space-y-4">
+          <div className="text-xs tracking-widest text-slate-400 font-bold uppercase">
+            📅 REPOSITORY TIMELINE
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 relative">
+            {/* Horizontal line for connecting dots (hidden on mobile) */}
+            <div className="hidden sm:block absolute top-[28px] left-[10%] right-[10%] h-[2px] bg-slate-800 z-0" />
+            
+            {timelineEvents.map((ev, i) => (
+              <div key={i} className="flex flex-col items-center text-center relative z-10 p-3 rounded-xl" style={{
+                background: "rgba(0,0,0,0.2)",
+                border: "1px solid rgba(255,255,255,0.03)",
+              }}>
+                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1.5">
+                  {ev.dateStr}
+                </div>
+                
+                {/* Timeline node icon */}
+                <div className="w-8 h-8 rounded-full flex items-center justify-center mb-2 font-bold" style={{
+                  background: ev.icon === "🔴" ? "rgba(255,68,68,0.15)" : ev.icon === "🟠" ? "rgba(255,107,53,0.15)" : ev.icon === "🟢" || ev.icon === "✓" ? "rgba(0,255,136,0.15)" : "rgba(0,245,255,0.15)",
+                  border: `1px solid ${ev.icon === "🔴" ? "#ff4444" : ev.icon === "🟠" ? "var(--orange)" : ev.icon === "🟢" || ev.icon === "✓" ? "var(--green)" : "var(--cyan)"}`,
+                  color: ev.icon === "🔴" ? "#ff4444" : ev.icon === "🟠" ? "var(--orange)" : ev.icon === "🟢" || ev.icon === "✓" ? "var(--green)" : "var(--cyan)",
+                  boxShadow: `0 0 10px ${ev.icon === "🔴" ? "rgba(255,68,68,0.2)" : ev.icon === "🟠" ? "rgba(255,107,53,0.2)" : ev.icon === "🟢" || ev.icon === "✓" ? "rgba(0,255,136,0.2)" : "rgba(0,245,255,0.2)"}`,
+                }}>
+                  {ev.icon}
+                </div>
+
+                <div className="text-[10px] text-slate-200 font-semibold leading-relaxed">
+                  {ev.label}
+                </div>
+                
+                {ev.bar && (
+                  <div className="text-[9px] font-mono mt-1" style={{ color: "var(--cyan)" }}>
+                    {ev.bar}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -316,8 +687,9 @@ export default function VerdictPanel() {
                 </div>
                 
                 {/* Visual change indicator */}
-                <div className="text-xs font-bold font-mono" style={{ color: "var(--green)" }}>
-                  +{targetScore - score} pts
+                <div className="text-xs font-bold font-mono text-right" style={{ color: "var(--green)" }}>
+                  <div>Potential +{targetScore - score} pts</div>
+                  <div className="text-[9px] text-slate-500 font-normal">if recommendations are followed</div>
                 </div>
               </div>
             </div>

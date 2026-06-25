@@ -22,7 +22,7 @@ export default function Dashboard() {
   if (!data) return null;
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
+    <div id="dashboard" className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
       {/* Top navigation replaces sidebar */}
       <TopNav />
 
@@ -82,61 +82,70 @@ export default function Dashboard() {
         {/* VERDICT PANEL — full width, relocated to the bottom fold */}
         <VerdictPanel />
 
-        {/* Footer */}
-        <footer className="mt-10 pt-6 text-center" style={{ borderTop: "1px solid rgba(0,245,255,0.08)" }}>
-          <div className="text-xs mt-3 flex flex-col items-center justify-center gap-2.5" style={{ color: "var(--text-muted)", fontFamily: "JetBrains Mono, monospace" }}>
-            <div className="flex items-center gap-3 justify-center">
-              <span style={{ color: "var(--text-secondary)" }}>
-                Built by <span className="neon-text-cyan font-bold">Sudhanshu Sinha</span>
-              </span>
-              <span style={{ color: "rgba(255,255,255,0.15)" }}>|</span>
-              <a
-                href="mailto:sudhanshutheking183@gmail.com"
-                className="flex items-center justify-center w-7 h-7 rounded border transition-all duration-200"
-                style={{ borderColor: "rgba(0,245,255,0.2)", background: "rgba(0,245,255,0.03)" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--cyan)";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(0,245,255,0.1)";
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,245,255,0.2)";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(0,245,255,0.03)";
-                  (e.currentTarget as HTMLElement).style.transform = "none";
-                }}
-                title="Email Sudhanshu"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--cyan)" }}>
-                  <rect width="20" height="16" x="2" y="4" rx="2" />
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                </svg>
-              </a>
-              <a
-                href="https://www.linkedin.com/in/sudhanshu-sinha-4619a429a/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center w-7 h-7 rounded border transition-all duration-200"
-                style={{ borderColor: "rgba(255,0,255,0.2)", background: "rgba(255,0,255,0.03)" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--magenta)";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,0,255,0.1)";
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,0,255,0.2)";
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,0,255,0.03)";
-                  (e.currentTarget as HTMLElement).style.transform = "none";
-                }}
-                title="LinkedIn Profile"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--magenta)" }}>
-                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-                  <rect width="4" height="12" x="2" y="9" />
-                  <circle cx="4" cy="4" r="2" />
-                </svg>
-              </a>
+        {/* Premium Footer */}
+        <footer className="mt-16 pt-8 pb-12" style={{ borderTop: "1px solid rgba(0,245,255,0.08)" }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+            {/* Column 1: Info */}
+            <div className="space-y-1.5 text-center md:text-left">
+              <div className="text-base font-black tracking-wider text-slate-200">
+                <span className="neon-text-cyan">REPO</span>RADAR
+              </div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-widest">
+                Repository Intelligence Platform
+              </div>
             </div>
-            <div className="mt-1 opacity-70">RepoRadar · Open Source · Free · Built with Next.js + GitHub API</div>
+
+            {/* Column 2: Authorship */}
+            <div className="space-y-1 text-center">
+              <div>
+                Built by <span className="neon-text-cyan font-bold">Sudhanshu Sinha</span>
+              </div>
+              <div className="text-[10px] text-slate-600">
+                Open Source · Free · Next.js + GitHub API
+              </div>
+            </div>
+
+            {/* Column 3: Links & Version */}
+            <div className="space-y-2 text-center md:text-right">
+              <div className="flex items-center justify-center md:justify-end gap-4">
+                <a
+                  href="https://github.com/sriiverse/RepoRadar"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-cyan transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "var(--cyan)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
+                >
+                  GitHub
+                </a>
+                <span className="text-slate-800">|</span>
+                <a
+                  href="https://www.linkedin.com/in/sudhanshu-sinha-4619a429a/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-magenta transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "var(--magenta)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
+                >
+                  LinkedIn
+                </a>
+                <span className="text-slate-800">|</span>
+                <a
+                  href="mailto:sudhanshutheking183@gmail.com"
+                  className="hover:text-cyan transition-colors"
+                  style={{ color: "var(--text-muted)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "var(--cyan)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted)"}
+                >
+                  API / Contact
+                </a>
+              </div>
+              <div className="text-[10px] text-slate-600">
+                Version 2.0
+              </div>
+            </div>
           </div>
         </footer>
       </main>
